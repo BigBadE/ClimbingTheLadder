@@ -1,0 +1,39 @@
+[package]
+name = "client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+macros = { path = "../macros" }
+core = { path = "../core" }
+
+# Rendering
+winit = "0.27.5"
+wgpu = "0.14.2"
+
+# Utility
+env_logger = "0.10.0"
+anyhow = "1.0.66"
+instant = "0.1.12"
+log = "0.4"
+
+# Multithreading
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1.24.1", features = ["rt-multi-thread" ] }
+
+# WASM
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tokio = { version = "1.24.1", features = ["rt"] }
+console_error_panic_hook = "0.1.6"
+console_log = "0.2.0"
+wgpu = { version = "0.14", features = ["webgl"]}
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4.30"
+web-sys = { version = "0.3", features = [
+    "Document",
+    "Window",
+    "Element",
+]}
+
+[lib]
+crate-type = ["cdylib", "rlib"]

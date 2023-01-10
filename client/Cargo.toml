@@ -7,6 +7,9 @@ edition = "2021"
 macros = { path = "../macros" }
 core = { path = "../core" }
 
+# Modding
+libloading = "0.7.4"
+
 # Resources
 json = "0.12.4"
 

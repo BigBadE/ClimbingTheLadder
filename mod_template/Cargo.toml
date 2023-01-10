@@ -1,0 +1,10 @@
+[package]
+name = "mod-template"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Example for this to compile. TODO automatically move into mod folder.
+core = { path = "../core" }
+client = { path = "../client" }
+server = { path = "../server" }

@@ -7,9 +7,12 @@ use tokio::runtime::Builder;
 use core::Game;
 use crate::client::Client;
 use crate::display::window::GameWindow;
+use crate::mods::mod_loader::load_mods;
 
 pub mod display;
 pub mod input;
+pub mod mods;
+pub mod resources;
 pub mod renderer;
 pub mod ui;
 pub mod client;
@@ -35,5 +38,6 @@ fn main() {
         .thread_stack_size(3 * 1024 * 1024)
         .build().unwrap();
 
+    let loading = io_runtime.spawn(load_mods());
     main_runtime.block_on(GameWindow::run(Game::new(cpu_runtime, io_runtime), Client::new));
 }

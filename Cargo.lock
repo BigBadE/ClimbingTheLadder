@@ -163,6 +163,7 @@ dependencies = [
  "env_logger",
  "instant",
  "json",
+ "libloading",
  "log",
  "macros",
  "tokio",
@@ -858,6 +859,15 @@ dependencies = [
  "log",
  "wasi",
  "windows-sys 0.42.0",
+]
+
+[[package]]
+name = "mod-template"
+version = "0.1.0"
+dependencies = [
+ "client",
+ "core",
+ "server",
 ]
 
 [[package]]

@@ -9,6 +9,7 @@ use wasm_bindgen::prelude::*;
 
 pub mod display;
 pub mod input;
+pub mod resources;
 pub mod renderer;
 pub mod ui;
 pub mod client;

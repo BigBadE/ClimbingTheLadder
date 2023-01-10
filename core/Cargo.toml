@@ -7,7 +7,12 @@ edition = "2021"
 
 [dependencies]
 macros = { path = "../macros" }
+
+# Util
 anyhow = "1.0.66"
+
+# Resources
+json = "0.12.4"
 
 # Multithreading
 tokio = { version = "1.24.1", features = ["rt"] }

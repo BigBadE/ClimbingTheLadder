@@ -17,7 +17,7 @@ pub struct GameWindow {
 }
 
 impl GameWindow {
-    async fn new(window: Window) -> Self {
+    async fn new(window: &Window) -> Self {
         let size = window.inner_size();
         //Make sure it's >0 or it may crash
         let size = PhysicalSize::new(size.width.max(1), size.height.max(1));
@@ -94,7 +94,7 @@ impl GameWindow {
         }
 
         let id = window.id();
-        let window = GameWindow::new(window).await;
+        let window = GameWindow::new(&window).await;
         let mut context = context(window, game.await);
         let mut next_frame = context.rendering_time(Instant::now());
         event_loop.run(move |ev, _, control_flow| {

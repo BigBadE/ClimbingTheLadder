@@ -1,6 +1,9 @@
 use std::time::Duration;
 use core::settings::Settings;
+use macros::JsonResource;
+use json::JsonValue;
 
+#[derive(JsonResource)]
 pub struct GameSettings {
     pub frames_per_second: Duration,
     settings: Settings
@@ -11,10 +14,10 @@ impl GameSettings {
         return Self {
             frames_per_second: Duration::from_nanos(1000000000 / 60),
             settings: Settings::new()
-        }
+        };
     }
 
-    pub fn load() -> Self {
-        todo!();
+    pub fn load(resource: &JsonValue) -> Self {
+        return __load_GameSettings(GameSettings::new(), resource);
     }
 }

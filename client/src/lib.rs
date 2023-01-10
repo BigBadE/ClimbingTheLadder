@@ -17,7 +17,7 @@ pub mod settings;
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen(start))]
 #[cfg(target_arch = "wasm32")]
 pub async fn run() {
-    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+    console_error_panic_hook::set_once();
     console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
 
     let cpu_runtime = Builder::new_current_thread()

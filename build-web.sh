@@ -1,1 +1,1 @@
-bash -c "wasm-pack build --target web --out-dir ../web/pkg client"
+bash -c "wasm-pack build --debug --target web --out-dir ../web/pkg client"

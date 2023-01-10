@@ -8,7 +8,7 @@ pub fn json_implement(item: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(item as DeriveInput);
     //Function header
     let mut output = String::from(
-        format!("pub fn __load_{}(input: &mut {}, value: &JsonValue) {{", ast.ident, ast.ident));
+        format!("pub fn __load_{}(mut input: {}, value: &json::JsonValue) -> {} {{", ast.ident, ast.ident, ast.ident));
 
     //Get all fields from the struct
     let fields =
@@ -61,7 +61,7 @@ pub fn json_implement(item: TokenStream) -> TokenStream {
         }
     }
 
-    output.push('}');
+    output += "return input;}";
     output.parse().unwrap()
 }
 
@@ -79,6 +79,7 @@ fn load_path(field_name: String, found_type: &str) -> String {
     return match found_type {
         "u8" => format!("input.{} = value[\"{}\"].as_u8().expect(\"No field {}\")", field_name, field_name, field_name),
         "u16" => format!("input.{} = value[\"{}\"].as_u16().expect(\"No field {}\")", field_name, field_name, field_name),
-        _ => format!("input.{} = {}::new(&value[\"{}\"])", field_name, found_type, field_name)
+        "Duration" => format!("input.{} = Duration::from_nanos(value[\"{}\"].as_u64().expect(\"No field {}\"))", field_name, field_name, field_name),
+        _ => format!("input.{} = {}::load(&value[\"{}\"])", field_name, found_type, found_type)
     };
 }

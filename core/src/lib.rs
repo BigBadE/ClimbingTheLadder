@@ -32,7 +32,7 @@ impl Game {
 }
 
 impl Renderable for Game {
-    fn render<'a>(&self) -> &'a [&Mesh] {
+    fn render(&self) -> Vec<&Mesh> {
         todo!()
     }
 }

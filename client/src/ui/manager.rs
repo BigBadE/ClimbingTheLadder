@@ -1,5 +1,6 @@
 use winit::event::{ElementState, KeyboardInput, MouseButton};
 use core::rendering::renderable::Renderable;
+use core::rendering::mesh::Mesh;
 use crate::ui::window::UIWindow;
 
 pub struct UIManager {
@@ -17,19 +18,23 @@ impl UIManager {
         }
     }
 
+    pub fn open(&mut self, window: UIWindow) {
+        self.windows.push(window);
+    }
+
     pub fn resize(&mut self, size: (u32, u32)) {
         self.size = size;
     }
 }
 
 impl Renderable for UIManager {
-    fn render<'a>(&self) -> &'a [&core::rendering::mesh::Mesh] {
+    fn render(&self) -> Vec<&Mesh> {
         let mut meshes = Vec::new();
-        for window in self.windows {
+        for window in &self.windows {
             for mesh in window.render() {
-                meshes.push(*mesh);
+                meshes.push(mesh);
             }
         }
-        return meshes.as_slice();
+        return meshes;
     }
 }

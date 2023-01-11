@@ -1,10 +1,10 @@
 use std::{env, fs};
 use std::fs::DirEntry;
 use std::future::Future;
-use std::process::Command;
 use anyhow::Error;
 use libloading::{Library, Symbol};
 
+use core::mods::mod_trait::ModMain;
 use core::mods::mods::{GameMod, ModManifest};
 
 pub async fn load_mods() -> Vec<impl Future<Output=Result<GameMod, Error>>> {
@@ -40,5 +40,5 @@ async fn load_mod(mod_folder: DirEntry) -> Result<GameMod, Error> {
         }
     };
     let func: Symbol<unsafe extern fn() -> Box<dyn ModMain>> = unsafe { library.get(manifest.main.as_bytes())? };
-    return Ok(GameMod::new(manifest, func()));
+    return Ok(GameMod::new(manifest, unsafe { func() }));
 }

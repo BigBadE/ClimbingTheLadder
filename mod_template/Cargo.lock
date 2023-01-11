@@ -864,14 +864,9 @@ dependencies = [
 [[package]]
 name = "mod-template"
 version = "0.1.0"
-
-[[package]]
-name = "mod-template-code"
-version = "0.1.0"
 dependencies = [
  "client",
  "core",
- "server",
 ]
 
 [[package]]
@@ -1264,14 +1259,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "server"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "macros",
 ]
 
 [[package]]

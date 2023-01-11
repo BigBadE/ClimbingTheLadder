@@ -2,7 +2,9 @@
 name = "mod-template"
 version = "0.1.0"
 edition = "2021"
-build = "build.rs"
 
 [workspace]
-members = [ "mod" ]
+
+[dependencies]
+core = { path = "../core" }
+client = { path = "../client" }

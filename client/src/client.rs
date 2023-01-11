@@ -1,5 +1,6 @@
 use instant::Instant;
-use winit::event::{ElementState, KeyboardInput, MouseButton};
+use log::debug;
+use winit::event::{ElementState, KeyboardInput, ModifiersState, MouseButton};
 use crate::display::window::{Context, GameWindow};
 use crate::renderer::renderer::Renderer;
 use crate::ui::manager::UIManager;
@@ -16,7 +17,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(window: display::window::GameWindow, game: Game) -> Self {
+    pub fn new(window: GameWindow, game: Game) -> Self {
         return Self {
             next_update: Instant::now() + game.settings.updates_per_second,
             window,
@@ -37,16 +38,29 @@ impl Context for Client {
         self.game.update();
     }
 
+    fn key_modifier_change(&mut self, modifiers: &ModifiersState) {
+        self.window.modifiers = modifiers.bits();
+    }
+
     fn resize(&mut self, size: (u32, u32)) {
         self.ui_manager.resize(size);
     }
 
     fn key_input(&mut self, input: &KeyboardInput) {
-        todo!()
+        match input.virtual_keycode {
+            Some(keycode) => match self.window.settings.inputs.map(self.window.modifiers, keycode) {
+                Some(function) => function(&input.state),
+                None => {}
+            },
+            None => {}
+        }
     }
 
     fn mouse_input(&mut self, button: &MouseButton, state: &ElementState) {
-        todo!()
+        match self.window.settings.inputs.map_mouse(button) {
+            Some(function) => function(state),
+            None => {}
+        }
     }
 
     fn cursor_move(&mut self, position: (f64, f64)) { self.ui_manager.cursor_pos = position; }

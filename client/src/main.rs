@@ -9,6 +9,7 @@ use crate::client::Client;
 use crate::display::window::GameWindow;
 use crate::mods::mod_loader::load_mods;
 
+pub mod debug;
 pub mod display;
 pub mod input;
 pub mod mods;

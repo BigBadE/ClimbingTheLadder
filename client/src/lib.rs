@@ -7,6 +7,7 @@ use crate::display::window::GameWindow;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+pub mod debug;
 pub mod display;
 pub mod input;
 pub mod resources;

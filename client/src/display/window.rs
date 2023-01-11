@@ -1,7 +1,7 @@
 use std::future::Future;
 use instant::Instant;
 use winit::dpi::PhysicalSize;
-use winit::event::{ElementState, Event, KeyboardInput, MouseButton, WindowEvent};
+use winit::event::{ElementState, Event, KeyboardInput, ModifiersState, MouseButton, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder, WindowId};
 use core::Game;
@@ -9,6 +9,7 @@ use crate::settings::GameSettings;
 
 pub struct GameWindow {
     pub settings: GameSettings,
+    pub modifiers: u32,
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -61,6 +62,7 @@ impl GameWindow {
 
         return Self {
             settings: GameSettings::new(),
+            modifiers: 0,
             surface,
             device,
             queue,
@@ -129,6 +131,9 @@ impl GameWindow {
                         WindowEvent::MouseInput { button, state, .. } => {
                             context.mouse_input(button, state)
                         }
+                        WindowEvent::ModifiersChanged(modifiers) => {
+                            context.key_modifier_change(modifiers)
+                        }
                         WindowEvent::CursorMoved { position, .. } => {
                             context.cursor_move((position.x, position.y));
                         }
@@ -162,6 +167,8 @@ pub trait Context {
     fn render(&mut self);
 
     fn update(&mut self);
+
+    fn key_modifier_change(&mut self, modifiers: &ModifiersState);
 
     fn resize(&mut self, size: (u32, u32));
 

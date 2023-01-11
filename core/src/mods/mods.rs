@@ -35,7 +35,7 @@ impl ModManifest {
     }
 
     pub fn load(manifest: &JsonValue) -> Result<Self, Error> {
-        let returning = __load_ModManifest(ModManifest::new(), manifest);
+        let mut returning = __load_ModManifest(ModManifest::new(), manifest);
         for entry in manifest["platforms"].entries() {
             returning.platforms.insert(entry.0.to_string(), match entry.1 {
                 JsonValue::String(str) => str.clone(),

@@ -11,7 +11,7 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, window: &mut GameWindow, renderables: &[&[Mesh]]) {
+    pub fn render(&mut self, window: &mut GameWindow, renderables: &[&[&Mesh]]) {
         for rendering in renderables {
             for mesh in *rendering {
                 todo!()

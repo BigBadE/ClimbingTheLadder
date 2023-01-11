@@ -32,7 +32,7 @@ impl Game {
 }
 
 impl Renderable for Game {
-    fn render<'a>(&mut self) -> &'a [Mesh] {
+    fn render<'a>(&self) -> &'a [&Mesh] {
         todo!()
     }
 }

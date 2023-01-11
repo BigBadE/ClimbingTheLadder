@@ -8,7 +8,7 @@ use crate::input::manager::InputManager;
 pub struct GameSettings {
     pub frames_per_second: Duration,
     pub inputs: InputManager,
-    settings: Settings
+    pub settings: Settings
 }
 
 impl GameSettings {

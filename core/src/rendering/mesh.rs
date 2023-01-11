@@ -1,5 +1,3 @@
-use alloc::vec::Vec;
-
 pub struct Mesh {
     pub vertexes: Vec<Vertex>,
     pub indices: Vec<u32>

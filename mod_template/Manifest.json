@@ -1,3 +1,6 @@
 {
-  "main": "mod_template_main"
+  "main": "mod_template_main",
+  "platforms": {
+    "win10:x86_64": "assemblies/win10:x86_64.dll"
+  }
 }

@@ -3,16 +3,19 @@ use std::string::String;
 use anyhow::Error;
 use json::JsonValue;
 use macros::JsonResource;
+use crate::mods::mod_trait::ModMain;
 
 //A loaded mod
 pub struct GameMod {
-    manifest: ModManifest
+    manifest: ModManifest,
+    main: Box<dyn ModMain>
 }
 
 impl GameMod {
-    pub fn new(manifest: ModManifest) -> Self {
+    pub fn new(manifest: ModManifest, main: Box<dyn ModMain>) -> Self {
         return Self {
-            manifest
+            manifest,
+            main
         }
     }
 }

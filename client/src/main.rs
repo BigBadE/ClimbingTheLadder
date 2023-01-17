@@ -1,13 +1,13 @@
 //No main in WASM
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
-use std::future;
-use std::task::Poll;
 use tokio::runtime::Builder;
-use core::Game;
+use game::Game;
+use game::util::task_manager::TaskManager;
 use crate::client::Client;
 use crate::display::window::GameWindow;
 use crate::mods::mod_loader::load_mods;
+use crate::resources::desktop_loader::DesktopLoader;
 
 pub mod debug;
 pub mod display;
@@ -39,6 +39,7 @@ fn main() {
         .thread_stack_size(3 * 1024 * 1024)
         .build().unwrap();
 
-    let loading = io_runtime.spawn(load_mods());
-    main_runtime.block_on(GameWindow::run(Game::new(cpu_runtime, io_runtime), Client::new));
+    main_runtime.block_on(
+        GameWindow::run(Game::new(load_mods(&io_runtime), Box::new(DesktopLoader::new()),
+                                  TaskManager::new(cpu_runtime, io_runtime)), Client::new));
 }

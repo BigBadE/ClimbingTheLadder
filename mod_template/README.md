@@ -17,6 +17,15 @@ This entire game is open source, so you can look at the code / documentation rel
 
 This basic template should be enough to get you started.
 
+Look at the docs folder to see documentation on different parts of the game.
+
+# Thread Safety
+
+The game is multi-threaded, so your mods will have to be as well!
+
+Luckily, the core game should handle all that for you. Heed any compiler warnings,
+they'll make sure everything stays safe.
+
 # Releasing
 
 Releasing requires building every computer that can run the game, which sounds worse than it is.

@@ -2,18 +2,14 @@ use std::collections::HashMap;
 use json::JsonValue;
 use json::object::Object;
 use winit::event::{ElementState, MouseButton, VirtualKeyCode};
-use macros::JsonResource;
 use core::hashmap;
 
 pub type PressedKey = (VirtualKeyCode, u32);
 pub type KeyAction = (&'static str, fn(&ElementState));
 
 //Each key is a combination of 32 bit modifier + 32 bit scancode
-#[derive(JsonResource)]
 pub struct InputManager {
-    #[ignore_field]
     keys: HashMap<PressedKey, KeyAction>,
-    #[ignore_field]
     key_map: HashMap<VirtualKeyCode, &'static str>,
 }
 
@@ -77,7 +73,7 @@ impl InputManager {
             loading.keys.remove(&replacing);
             loading.keys.insert(key, value);
         }
-        return __load_InputManager(loading, resource);
+        return loading;
     }
 
     //Unwraps the name/modifier and replaces the given key if it matches.

@@ -1,4 +1,3 @@
-use winit::event::{ElementState, KeyboardInput, MouseButton};
 use core::rendering::renderable::Renderable;
 use core::rendering::mesh::Mesh;
 use crate::ui::window::UIWindow;
@@ -28,10 +27,10 @@ impl UIManager {
 }
 
 impl Renderable for UIManager {
-    fn render(&self) -> Vec<&Mesh> {
+    fn data(&self) -> Vec<&Mesh> {
         let mut meshes = Vec::new();
         for window in &self.windows {
-            for mesh in window.render() {
+            for mesh in window.data() {
                 meshes.push(mesh);
             }
         }

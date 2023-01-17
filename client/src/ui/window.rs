@@ -15,7 +15,7 @@ impl UIWindow {
 }
 
 impl Renderable for UIWindow {
-    fn render(&self) -> Vec<&Mesh> {
-        return self.content.render();
+    fn data(&self) -> Vec<&Mesh> {
+        return self.content.data();
     }
 }

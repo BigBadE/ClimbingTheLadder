@@ -1,5 +1,4 @@
 use winit::event::{ElementState, VirtualKeyCode};
-use crate::Client;
 use crate::input::manager::InputManager;
 use crate::ui::manager::UIManager;
 

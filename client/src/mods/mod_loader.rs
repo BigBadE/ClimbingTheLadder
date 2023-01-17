@@ -3,18 +3,22 @@ use std::fs::DirEntry;
 use std::future::Future;
 use anyhow::Error;
 use libloading::{Library, Symbol};
+use log::error;
+use tokio::runtime::Runtime;
+use tokio::task::{JoinHandle, JoinSet};
+use game::mods::mod_trait::ModMain;
+use game::mods::mods::{GameMod, ModManifest};
 
-use core::mods::mod_trait::ModMain;
-use core::mods::mods::{GameMod, ModManifest};
-
-pub async fn load_mods() -> Vec<impl Future<Output=Result<GameMod, Error>>> {
+pub fn load_mods(runtime: &Runtime) -> JoinSet<Result<GameMod, Error>> {
     let mod_folder = env::current_dir().ok().unwrap().join("mods");
     fs::create_dir_all(&mod_folder).unwrap();
-    let mut output = Vec::new();
+    let mut output = JoinSet::new();
     for mod_folder in fs::read_dir(mod_folder).unwrap() {
         match mod_folder {
-            Ok(mod_folder) => output.push(load_mod(mod_folder)),
-            Err(error) => println!("Error loading mod:\n{}", error)
+            Ok(mod_folder) => {
+                output.spawn_on(load_mod(mod_folder), runtime.handle());
+            },
+            Err(error) => error!("Error opening mod folder:\n{}", error)
         }
     }
     return output;
@@ -39,6 +43,6 @@ async fn load_mod(mod_folder: DirEntry) -> Result<GameMod, Error> {
             return Err(Error::msg(format!("Failed to load mod {}", manifest.name)).context(error));
         }
     };
-    let func: Symbol<unsafe extern fn() -> Box<dyn ModMain>> = unsafe { library.get(manifest.main.as_bytes())? };
-    return Ok(GameMod::new(manifest, unsafe { func() }));
+    let func: Symbol<unsafe extern fn() -> Box<dyn ModMain + Send>> = unsafe { library.get(manifest.main.as_bytes())? };
+    return Ok(GameMod::new(manifest, mod_folder.path(), unsafe { func() }));
 }

@@ -1,6 +1,5 @@
-use crate::GameWindow;
-
 use core::rendering::mesh::Mesh;
+use crate::display::window::GameWindow;
 
 pub struct Renderer {}
 

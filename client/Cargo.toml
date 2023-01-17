@@ -2,10 +2,11 @@
 name = "client"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 [dependencies]
 macros = { path = "../macros" }
-core = { path = "../core" }
+game = { path = "../game" }
 
 # Modding
 libloading = "0.7.4"
@@ -22,6 +23,9 @@ env_logger = "0.10.0"
 anyhow = "1.0.66"
 instant = "0.1.12"
 log = "0.4"
+linkme = "0.3.7"
+
+include_dir = "0.7.3"
 
 # Multithreading
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -40,6 +44,9 @@ web-sys = { version = "0.3", features = [
     "Window",
     "Element",
 ]}
+
+[build-dependencies]
+symlink = "0.1.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

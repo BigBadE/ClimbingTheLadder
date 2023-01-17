@@ -9,7 +9,7 @@ pub fn json_implement(item: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(item as DeriveInput);
     //Function header
     let mut output = String::from(
-        format!("pub fn __load_{}(mut input: {}, value: &json::JsonValue) -> {} {{", ast.ident, ast.ident, ast.ident));
+        format!("pub fn __load_{}(mut input: {}, value: &json::JsonValue) -> Result<{}, anyhow::Error> {{", ast.ident, ast.ident, ast.ident));
 
     //Get all fields from the struct
     let fields =
@@ -43,6 +43,8 @@ pub fn json_implement(item: TokenStream) -> TokenStream {
             //If it's not required, check if it exists
             if !required {
                 output += format!("if value.has_key(\"{}\") {{", field_name).as_str();
+            } else {
+                output += format!("if !value.has_key(\"{}\") {{ return Err(anyhow::Error::msg()) }}", field_name).as_str();
             }
 
             //Load field from json
@@ -56,7 +58,7 @@ pub fn json_implement(item: TokenStream) -> TokenStream {
         }
     }
 
-    output += "return input;}";
+    output += "return Ok(input);}";
     output.parse().unwrap()
 }
 
@@ -108,13 +110,13 @@ fn load_path(field_name: String, found_type: &str) -> String {
 
     //Add load depending on the value type
     return match found_type {
-        "u8" => format!("value[\"{}\"].as_u8().expect(\"No field {}\")", field_name, field_name),
-        "u16" => format!("value[\"{}\"].as_u16().expect(\"No field {}\")", field_name, field_name),
-        "u64" => format!("value[\"{}\"].as_u64().expect(\"No field {}\")", field_name, field_name),
-        "&str" => format!("value[\"{}\"].as_str().expect(\"No field {}\")", field_name, field_name),
-        "String" => format!("String::from(value[\"{}\"].as_str().expect(\"No field {}\"))", field_name, field_name),
-        "HashMap" => format!("value[\"{}\"].as_u64().expect(\"No field {}\")", field_name, field_name),
-        "Duration" => format!("Duration::from_nanos(value[\"{}\"].as_u64().expect(\"No field {}\"))", field_name, field_name),
-        _ => format!("{}::load(&value[\"{}\"])", found_type, found_type)
+        "u8" => format!("value[\"{}\"].as_u8().unwrap())", field_name),
+        "u16" => format!("value[\"{}\"].as_u16().unwrap()", field_name),
+        "u64" => format!("value[\"{}\"].as_u64().unwrap()", field_name),
+        "&str" => format!("value[\"{}\"].as_str().unwrap()", field_name),
+        "String" => format!("String::from(value[\"{}\"].as_str().unwrap())", field_name),
+        "HashMap" => format!("value[\"{}\"].as_u64().unwrap()", field_name),
+        "Duration" => format!("Duration::from_nanos(value[\"{}\"].as_u64().unwrap())", field_name),
+        _ => format!("{}::load(&value[\"{}\"])", found_type, field_name)
     };
 }

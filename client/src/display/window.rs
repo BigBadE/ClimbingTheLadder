@@ -1,10 +1,13 @@
 use std::future::Future;
 use instant::Instant;
+use tokio::runtime::Runtime;
 use winit::dpi::PhysicalSize;
 use winit::event::{ElementState, Event, KeyboardInput, ModifiersState, MouseButton, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::{Window, WindowBuilder, WindowId};
+use winit::window::{Window, WindowBuilder};
 use core::Game;
+use game::Game;
+use crate::client::Client;
 use crate::settings::GameSettings;
 
 pub struct GameWindow {
@@ -71,7 +74,7 @@ impl GameWindow {
         };
     }
 
-    pub async fn run<T: 'static + Context>(game: impl Future<Output=Game>, context: fn(GameWindow, Game) -> T) {
+    pub async fn run(game: impl Future<Output=Game>, update_runtime: Runtime) {
         let event_loop = EventLoop::new();
 
         let window = WindowBuilder::new().build(&event_loop).unwrap();
@@ -97,7 +100,7 @@ impl GameWindow {
 
         let id = window.id();
         let window = GameWindow::new(&window).await;
-        let mut context = context(window, game.await);
+        let mut context = Client::new(window, game.await);
         let mut next_frame = context.rendering_time(Instant::now());
         event_loop.run(move |ev, _, control_flow| {
             let rendering;
@@ -160,25 +163,4 @@ impl GameWindow {
             self.surface.configure(&self.device, &self.config);
         }
     }
-}
-
-
-pub trait Context {
-    fn render(&mut self);
-
-    fn update(&mut self);
-
-    fn key_modifier_change(&mut self, modifiers: &ModifiersState);
-
-    fn resize(&mut self, size: (u32, u32));
-
-    fn key_input(&mut self, input: &KeyboardInput);
-
-    fn mouse_input(&mut self, button: &MouseButton, state: &ElementState);
-
-    fn cursor_move(&mut self, position: (f64, f64));
-
-    fn update_time(&mut self) -> Instant;
-
-    fn rendering_time(&mut self, last_update: Instant) -> Instant;
 }

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::string::String;
 use anyhow::Error;
 use json::JsonValue;
@@ -8,13 +9,15 @@ use crate::mods::mod_trait::ModMain;
 //A loaded mod
 pub struct GameMod {
     manifest: ModManifest,
-    main: Box<dyn ModMain>
+    content_root: PathBuf,
+    main: Box<dyn ModMain + Send>
 }
 
 impl GameMod {
-    pub fn new(manifest: ModManifest, main: Box<dyn ModMain>) -> Self {
+    pub fn new(manifest: ModManifest, content_root: PathBuf, main: Box<dyn ModMain + Send>) -> Self {
         return Self {
             manifest,
+            content_root,
             main
         }
     }
@@ -38,7 +41,7 @@ impl ModManifest {
     }
 
     pub fn load(manifest: &JsonValue) -> Result<Self, Error> {
-        let mut returning = __load_ModManifest(ModManifest::new(), manifest);
+        let mut returning = __load_ModManifest(ModManifest::new(), manifest)?;
         for entry in manifest["platforms"].entries() {
             returning.platforms.insert(entry.0.to_string(), match entry.1 {
                 JsonValue::String(str) => str.clone(),

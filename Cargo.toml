@@ -2,7 +2,7 @@
 members = [
     "server",
     "client",
-    "core",
+    "game",
     "macros"
 ]
 resolver = "2"

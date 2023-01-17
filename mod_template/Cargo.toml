@@ -6,5 +6,8 @@ edition = "2021"
 [workspace]
 
 [dependencies]
-core = { path = "../core" }
+game = { path = "../game" }
 client = { path = "../client" }
+
+# Used to make sure main is sync
+static_assertions = "1.1.0"

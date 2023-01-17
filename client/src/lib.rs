@@ -1,11 +1,33 @@
-use tokio::runtime::Builder;
-use core::Game;
 
+#[cfg(target_arch = "wasm32")]
+use include_dir::{Dir, include_dir};
+
+#[cfg(target_arch = "wasm32")]
+use tokio::runtime::Builder;
+
+#[cfg(target_arch = "wasm32")]
+use tokio::task::JoinSet;
+
+#[cfg(target_arch = "wasm32")]
+use game::Game;
+
+#[cfg(target_arch = "wasm32")]
 use crate::client::Client;
+
+#[cfg(target_arch = "wasm32")]
 use crate::display::window::GameWindow;
 
 #[cfg(target_arch = "wasm32")]
+use crate::resources::web_loader::WebLoader;
+
+#[cfg(target_arch = "wasm32")]
+use game::util::task_manager;
+
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
+
+#[cfg(target_arch = "wasm32")]
+static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../resources");
 
 pub mod debug;
 pub mod display;
@@ -32,5 +54,6 @@ pub async fn run() {
         .thread_stack_size(3 * 1024 * 1024)
         .build().unwrap();
 
-    GameWindow::run(Game::new(cpu_runtime, io_runtime), Client::new).await;
+    GameWindow::run(Game::new(JoinSet::new(), Box::new(WebLoader::new(RESOURCES)),
+                              TaskManager::new(cpu_runtime, io_runtime)), Client::new).await;
 }

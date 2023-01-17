@@ -21,6 +21,6 @@ impl GameSettings {
     }
 
     pub fn load(resource: &JsonValue) -> Self {
-        return __load_GameSettings(GameSettings::new(), resource);
+        return __load_GameSettings(GameSettings::new(), resource).unwrap();
     }
 }

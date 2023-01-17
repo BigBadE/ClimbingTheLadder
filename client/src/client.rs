@@ -1,10 +1,9 @@
 use instant::Instant;
-use log::debug;
+use tokio::runtime::Runtime;
 use winit::event::{ElementState, KeyboardInput, ModifiersState, MouseButton};
-use crate::display::window::{Context, GameWindow};
+use crate::display::window::GameWindow;
 use crate::renderer::renderer::Renderer;
 use crate::ui::manager::UIManager;
-use crate::display;
 use core::rendering::renderable::Renderable;
 use core::Game;
 
@@ -13,7 +12,7 @@ pub struct Client {
     window: GameWindow,
     game: Game,
     ui_manager: UIManager,
-    renderer: Renderer,
+    renderer: Renderer
 }
 
 impl Client {
@@ -26,27 +25,25 @@ impl Client {
             ui_manager: UIManager::new(),
         };
     }
-}
 
-impl Context for Client {
-    fn render(&mut self) {
-        self.renderer.render(&mut self.window, &[self.game.render(), self.ui_manager.render()]);
+    pub fn render(&mut self) {
+        self.renderer.render(&mut self.window, &[self.game.data(), self.ui_manager.data()]);
     }
 
-    fn update(&mut self) {
+    pub fn update(&mut self) {
         self.next_update += self.game.settings.updates_per_second;
-        self.game.update();
+        self.game.notify_update();
     }
 
-    fn key_modifier_change(&mut self, modifiers: &ModifiersState) {
+    pub(crate) fn key_modifier_change(&mut self, modifiers: &ModifiersState) {
         self.window.modifiers = modifiers.bits();
     }
 
-    fn resize(&mut self, size: (u32, u32)) {
+    pub(crate) fn resize(&mut self, size: (u32, u32)) {
         self.ui_manager.resize(size);
     }
 
-    fn key_input(&mut self, input: &KeyboardInput) {
+    pub(crate) fn key_input(&mut self, input: &KeyboardInput) {
         match input.virtual_keycode {
             Some(keycode) => match self.window.settings.inputs.map(self.window.modifiers, keycode) {
                 Some(function) => function(&input.state),
@@ -56,20 +53,20 @@ impl Context for Client {
         }
     }
 
-    fn mouse_input(&mut self, button: &MouseButton, state: &ElementState) {
+    pub(crate) fn mouse_input(&mut self, button: &MouseButton, state: &ElementState) {
         match self.window.settings.inputs.map_mouse(button) {
             Some(function) => function(state),
             None => {}
         }
     }
 
-    fn cursor_move(&mut self, position: (f64, f64)) { self.ui_manager.cursor_pos = position; }
+    pub(crate) fn cursor_move(&mut self, position: (f64, f64)) { self.ui_manager.cursor_pos = position; }
 
-    fn update_time(&mut self) -> Instant {
+    pub(crate) fn update_time(&mut self) -> Instant {
         return self.next_update;
     }
 
-    fn rendering_time(&mut self, last_update: Instant) -> Instant {
+    pub(crate) fn rendering_time(&mut self, last_update: Instant) -> Instant {
         return last_update + self.window.settings.frames_per_second;
     }
 }

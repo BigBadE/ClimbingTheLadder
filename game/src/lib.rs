@@ -1,14 +1,11 @@
-use std::borrow::Borrow;
-use std::sync::{mpsc, Mutex, RwLock};
-use std::sync::mpsc::{Receiver, Sender};
+use std::mem::MaybeUninit;
+use std::sync::Mutex;
+use std::time::Duration;
 use anyhow::Error;
-use tokio::runtime::Runtime;
-use tokio::task::{JoinHandle, JoinSet};
+use tokio::task::JoinSet;
 use crate::resources::ContentLoader;
 use crate::mods::mod_manager::ModManager;
 use crate::mods::mods::GameMod;
-use crate::rendering::mesh::{FrameData, Mesh};
-use crate::rendering::renderable::Renderable;
 use crate::resources::resource_manager::ResourceManager;
 use crate::settings::Settings;
 use crate::util::runtime_factory::RuntimeFactory;
@@ -22,60 +19,58 @@ pub mod util;
 pub mod world;
 pub mod settings;
 
+static GAME_MUTEX: Mutex<MaybeUninit<Game>> = Mutex::new(MaybeUninit::uninit());
+
 pub struct Game {
     pub settings: Settings,
     pub task_manager: TaskManager,
+    worlds: Vec<World>,
     resource_manager: ResourceManager,
-    mods: ModManager,
-    updater: Sender<()>
+    mods: ModManager
 }
 
 impl Game {
-    pub async fn new(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentLoader + Send>,
-                     runtime_factory: Box<dyn RuntimeFactory>) -> Self {
+    pub async fn init(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentLoader + Send>,
+                     runtime_factory: Box<dyn RuntimeFactory>) {
+        //Hold the lock until inited.
+        let locked = GAME_MUTEX.lock();
+
         let settings = Settings::new();
         let mut task_manager = TaskManager::new(runtime_factory.spawn(), runtime_factory.spawn());
-        let mut resource_manager = ResourceManager::new();
-        task_manager.queue(true, resource_manager.load_types(content));
-        let (sender, receiver): (Sender<()>, Receiver<()>) = mpsc::channel();
+        let resource_manager = ResourceManager::new();
+        task_manager.queue_after(true, ResourceManager::load_types(content), ResourceManager::finish_loading);
 
-        runtime_factory.spawn().spawn(Self::update(receiver));
-        return Self {
+        let output = Self {
             settings,
             task_manager,
             resource_manager,
             mods: ModManager::new(mods),
-            updater: sender
+            worlds: Vec::new()
         };
+        locked.unwrap().write(output);
     }
 
-    pub fn notify_update(&self) {
-        self.updater.send(()).unwrap();
-    }
-
-    pub async fn update(update: Receiver<()>) {
-        let mut worlds: Vec<World> = Vec::new();
-        loop {
-            if update.recv().is_err() {
-                error!("Error on update channel");
-                return;
+    pub fn notify_update() -> Duration {
+        unsafe {
+            let mut game = GAME_MUTEX.lock().unwrap();
+            let game = game.assume_init_mut();
+            let mut polled = game.task_manager.poll();
+            //If one task is finished, poll the next.
+            while polled.1.is_some() {
+                polled.1.unwrap().call(game);
+                polled = game.task_manager.poll();
             }
 
-            for world in &mut worlds {
+            //Skip update if it's running a long task.
+            if polled.0 == false {
+                return game.settings.updates_per_second;
+            }
+
+            for world in &mut game.worlds {
                 world.update();
             }
+            return game.settings.updates_per_second;
         }
-    }
-}
-
-impl Renderable for Game {
-    //This is run on the main thread instead of the update thread!
-    fn data(&self) -> Vec<&Mesh> {
-        todo!()
-    }
-
-    fn render(&self) -> FrameData {
-        todo!()
     }
 }
 

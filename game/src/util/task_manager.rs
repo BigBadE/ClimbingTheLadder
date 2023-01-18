@@ -1,20 +1,19 @@
-use std::any::Any;
-use std::future;
 use std::future::Future;
-use std::pin::Pin;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
-use crate::error;
 
-pub struct Task<T> {
-    handle: JoinHandle<T>,
-    after: fn(T)
+use crate::{error, Game};
+use crate::util::alloc_handle::AllocHandle;
+
+pub struct Task {
+    handle: JoinHandle<AllocHandle>,
+    after: fn(&mut Game, &AllocHandle)
 }
 
 pub struct TaskManager {
     cpu_runtime: Runtime,
     io_runtime: Runtime,
-    tasks: Vec<Task<Box<dyn Any + Send>>>
+    tasks: Vec<Task>
 }
 
 impl TaskManager {
@@ -22,8 +21,8 @@ impl TaskManager {
         return Self {
             cpu_runtime,
             io_runtime,
-            tasks: Vec::new()
-        }
+            tasks: Vec::new(),
+        };
     }
 
     pub fn get_runtime(&self, io: bool) -> &Runtime {
@@ -31,11 +30,11 @@ impl TaskManager {
             &self.io_runtime
         } else {
             &self.cpu_runtime
-        }
+        };
     }
 
     pub fn queue<F>(&mut self, io_heavy: bool, task: F)
-        where F: Future<Output=Box<(dyn Any + Send + 'static)>> + Send + 'static {
+        where F: Future<Output=AllocHandle> + Send + 'static {
         if io_heavy {
             self.tasks.push(Task {
                 handle: self.io_runtime.spawn(task),
@@ -49,12 +48,12 @@ impl TaskManager {
         }
     }
 
-    pub fn queue_after<F>(&mut self, io_heavy: bool, task: F, after: fn(Box<(dyn Any + Send + 'static)>))
-        where F: Future<Output=Box<(dyn Any + Send + 'static)>> + Send + 'static {
+    pub fn queue_after<F>(&mut self, io_heavy: bool, task: F, after: fn(&mut Game, &AllocHandle))
+        where F: Future<Output=AllocHandle> + Send + 'static {
         if io_heavy {
             self.tasks.push(Task {
                 handle: self.io_runtime.spawn(task),
-                after, 
+                after,
             });
         } else {
             self.tasks.push(Task {
@@ -64,28 +63,48 @@ impl TaskManager {
         }
     }
 
-    fn empty<T>(_: T) {
+    fn empty(_: &mut Game, _: &AllocHandle) {}
 
-    }
-
-    pub async fn poll(&mut self) -> Option<bool> {
+    pub fn poll(&mut self) -> (bool, Option<FinishedTask>) {
         if !self.running() {
-            return Some(false);
+            return (true, None);
         }
-        let task = self.tasks.pop().unwrap();
+
+        let task = self.tasks.get(0).unwrap();
+
         if task.handle.is_finished() {
-            match task.handle.await {
-                Ok(result) => (task.after)(result),
+            let task = self.tasks.pop().unwrap();
+            return match self.cpu_runtime.block_on(task.handle) {
+                Ok(result) => (true, Some(FinishedTask::new(result, task.after))),
                 Err(error) => {
-                    error!("Error with long task!:\n{}", error)
+                    error!("Error running long task:\n{}", error);
+                    self.poll()
                 }
             }
-            return None;
         }
-        return Some(true);
+
+        return (false, None);
     }
 
     pub fn running(&self) -> bool {
         return !self.tasks.is_empty();
+    }
+}
+
+pub struct FinishedTask {
+    handle: AllocHandle,
+    function: fn(&mut Game, &AllocHandle)
+}
+
+impl FinishedTask {
+    pub fn new(handle: AllocHandle, function: fn(&mut Game, &AllocHandle)) -> Self {
+        return FinishedTask {
+            handle,
+            function
+        }
+    }
+
+    pub fn call(&self, game: &mut Game) {
+        (self.function)(game, &self.handle);
     }
 }

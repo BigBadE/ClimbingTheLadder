@@ -6,33 +6,31 @@ use crate::renderer::renderer::Renderer;
 use crate::ui::manager::UIManager;
 use core::rendering::renderable::Renderable;
 use core::Game;
+use game::Game;
 
 pub struct Client {
     next_update: Instant,
     window: GameWindow,
-    game: Game,
     ui_manager: UIManager,
     renderer: Renderer
 }
 
 impl Client {
-    pub fn new(window: GameWindow, game: Game) -> Self {
+    pub fn new(window: GameWindow) -> Self {
         return Self {
             next_update: Instant::now() + game.settings.updates_per_second,
             window,
-            game,
             renderer: Renderer::new(),
-            ui_manager: UIManager::new(),
+            ui_manager: UIManager::new()
         };
     }
 
     pub fn render(&mut self) {
-        self.renderer.render(&mut self.window, &[self.game.data(), self.ui_manager.data()]);
+        self.renderer.render(&mut self.window, &[/* TODO world, */self.ui_manager.data()]);
     }
 
     pub fn update(&mut self) {
-        self.next_update += self.game.settings.updates_per_second;
-        self.game.notify_update();
+        self.next_update += Game::notify_update();
     }
 
     pub(crate) fn key_modifier_change(&mut self, modifiers: &ModifiersState) {

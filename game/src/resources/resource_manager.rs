@@ -1,15 +1,16 @@
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::sync::Arc;
 use anyhow::Error;
 use json::JsonValue;
 use json::object::Object;
-use crate::error;
+use crate::{error, Game};
+use crate::resources::content_pack::ContentPack;
 use crate::resources::ContentLoader;
+use crate::util::alloc_handle::AllocHandle;
 
 pub struct ResourceManager {
     //Instantiators
-    instantiators: HashMap<String, fn(&mut ResourceManager, &Object) -> Result<Option<Arc<dyn NamedType + Send>>, Error>>,
+    instantiators: HashMap<String, fn(&mut ResourceManager, &Object) -> Result<Option<Arc<dyn NamedType + Send + Sync>>, Error>>,
     //Map of types and named types of that type
     types: HashMap<String, Vec<String>>,
     //Map of types to their name
@@ -25,8 +26,13 @@ impl ResourceManager {
         }
     }
 
-    pub async fn load_types(&mut self, content: Box<dyn ContentLoader + Send>) {
+    pub async fn load_types(content: Box<dyn ContentLoader + Send>) -> AllocHandle {
+        let mut content = content.load_main_content();
+        return AllocHandle::new(&mut content);
+    }
 
+    pub fn finish_loading(game: &mut Game, handle: &AllocHandle) {
+        let content = handle.read::<ContentPack>();
     }
 
     pub fn get_type(&self, name: &str) -> Option<&Arc<dyn NamedType + Send + Sync>> {

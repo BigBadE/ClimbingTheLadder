@@ -55,5 +55,5 @@ pub async fn run() {
         .build().unwrap();
 
     GameWindow::run(Game::new(JoinSet::new(), Box::new(WebLoader::new(RESOURCES)),
-                              TaskManager::new(cpu_runtime, io_runtime)), Client::new).await;
+                              TaskManager::new(cpu_runtime, io_runtime))).await;
 }

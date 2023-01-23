@@ -74,7 +74,7 @@ impl GameWindow {
         };
     }
 
-    pub async fn run(game: impl Future<Output=Game>, update_runtime: Runtime) {
+    pub async fn run(game: impl Future<Output=Game>) {
         let event_loop = EventLoop::new();
 
         let window = WindowBuilder::new().build(&event_loop).unwrap();

@@ -31,12 +31,11 @@ pub struct Game {
 
 impl Game {
     pub async fn init(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentLoader + Send>,
-                     runtime_factory: Box<dyn RuntimeFactory>) {
+                     mut task_manager: TaskManager) {
         //Hold the lock until inited.
         let locked = GAME_MUTEX.lock();
 
         let settings = Settings::new();
-        let mut task_manager = TaskManager::new(runtime_factory.spawn(), runtime_factory.spawn());
         let resource_manager = ResourceManager::new();
         task_manager.queue_after(true, ResourceManager::load_types(content), ResourceManager::finish_loading);
 
@@ -50,10 +49,15 @@ impl Game {
         locked.unwrap().write(output);
     }
 
+    pub async fn create_world(&mut self) {
+        self.worlds.push(World::new(self.task_manager));
+    }
+
     pub fn notify_update() -> Duration {
         unsafe {
             let mut game = GAME_MUTEX.lock().unwrap();
             let game = game.assume_init_mut();
+            //Poll tasks
             let mut polled = game.task_manager.poll();
             //If one task is finished, poll the next.
             while polled.1.is_some() {

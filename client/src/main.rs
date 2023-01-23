@@ -41,5 +41,5 @@ fn main() {
 
     main_runtime.block_on(
         GameWindow::run(Game::new(load_mods(&io_runtime), Box::new(DesktopLoader::new()),
-                                  TaskManager::new(cpu_runtime, io_runtime)), Client::new));
+                                  TaskManager::new(cpu_runtime, io_runtime))));
 }

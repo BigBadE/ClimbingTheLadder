@@ -1,12 +1,8 @@
-use std::future::Future;
 use instant::Instant;
-use tokio::runtime::Runtime;
 use winit::dpi::PhysicalSize;
-use winit::event::{ElementState, Event, KeyboardInput, ModifiersState, MouseButton, WindowEvent};
+use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
-use core::Game;
-use game::Game;
 use crate::client::Client;
 use crate::settings::GameSettings;
 
@@ -74,7 +70,7 @@ impl GameWindow {
         };
     }
 
-    pub async fn run(game: impl Future<Output=Game>) {
+    pub async fn run() {
         let event_loop = EventLoop::new();
 
         let window = WindowBuilder::new().build(&event_loop).unwrap();

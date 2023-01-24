@@ -1,5 +1,3 @@
-use core::rendering::renderable::Renderable;
-use core::rendering::mesh::Mesh;
 use crate::ui::window::UIWindow;
 
 pub struct UIManager {
@@ -26,7 +24,7 @@ impl UIManager {
     }
 }
 
-impl Renderable for UIManager {
+/*impl Renderable for UIManager {
     fn data(&self) -> Vec<&Mesh> {
         let mut meshes = Vec::new();
         for window in &self.windows {
@@ -36,4 +34,4 @@ impl Renderable for UIManager {
         }
         return meshes;
     }
-}
+}*/

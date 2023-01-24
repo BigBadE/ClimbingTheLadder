@@ -13,8 +13,8 @@ pub mod debug;
 pub mod display;
 pub mod input;
 pub mod mods;
-pub mod resources;
 pub mod renderer;
+pub mod resources;
 pub mod ui;
 pub mod client;
 pub mod settings;
@@ -39,7 +39,7 @@ fn main() {
         .thread_stack_size(3 * 1024 * 1024)
         .build().unwrap();
 
-    main_runtime.block_on(
-        GameWindow::run(Game::new(load_mods(&io_runtime), Box::new(DesktopLoader::new()),
-                                  TaskManager::new(cpu_runtime, io_runtime))));
+    main_runtime.spawn(Game::init(load_mods(&io_runtime), Box::new(DesktopLoader::new()),
+              TaskManager::new(cpu_runtime, io_runtime)));
+    main_runtime.block_on(GameWindow::run());
 }

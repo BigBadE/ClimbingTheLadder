@@ -1,32 +1,29 @@
 use instant::Instant;
-use tokio::runtime::Runtime;
 use winit::event::{ElementState, KeyboardInput, ModifiersState, MouseButton};
 use crate::display::window::GameWindow;
-use crate::renderer::renderer::Renderer;
+use crate::renderer::renderer::GameRenderer;
 use crate::ui::manager::UIManager;
-use core::rendering::renderable::Renderable;
-use core::Game;
 use game::Game;
 
 pub struct Client {
     next_update: Instant,
     window: GameWindow,
     ui_manager: UIManager,
-    renderer: Renderer
+    renderer: GameRenderer
 }
 
 impl Client {
     pub fn new(window: GameWindow) -> Self {
         return Self {
-            next_update: Instant::now() + game.settings.updates_per_second,
+            next_update: Instant::now(),
             window,
-            renderer: Renderer::new(),
+            renderer: GameRenderer::new(),
             ui_manager: UIManager::new()
         };
     }
 
     pub fn render(&mut self) {
-        self.renderer.render(&mut self.window, &[/* TODO world, */self.ui_manager.data()]);
+        self.renderer.render(&mut self.window);
     }
 
     pub fn update(&mut self) {

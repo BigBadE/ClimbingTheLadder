@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use json::JsonValue;
 use json::object::Object;
 use winit::event::{ElementState, MouseButton, VirtualKeyCode};
-use core::hashmap;
+use game::hashmap;
 
 pub type PressedKey = (VirtualKeyCode, u32);
 pub type KeyAction = (&'static str, fn(&ElementState));

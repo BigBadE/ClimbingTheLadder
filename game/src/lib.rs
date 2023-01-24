@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::mem::MaybeUninit;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -6,13 +7,14 @@ use tokio::task::JoinSet;
 use crate::resources::ContentLoader;
 use crate::mods::mod_manager::ModManager;
 use crate::mods::mods::GameMod;
+use crate::register::ThingRegister;
 use crate::resources::resource_manager::ResourceManager;
 use crate::settings::Settings;
-use crate::util::runtime_factory::RuntimeFactory;
 use crate::util::task_manager::TaskManager;
 use crate::world::world::World;
 
 pub mod mods;
+pub mod register;
 pub mod rendering;
 pub mod resources;
 pub mod util;
@@ -26,7 +28,8 @@ pub struct Game {
     pub task_manager: TaskManager,
     worlds: Vec<World>,
     resource_manager: ResourceManager,
-    mods: ModManager
+    mods: ModManager,
+    registerer: HashMap<&'static str, Box<dyn ThingRegister + Send + Sync>>
 }
 
 impl Game {
@@ -44,13 +47,15 @@ impl Game {
             task_manager,
             resource_manager,
             mods: ModManager::new(mods),
-            worlds: Vec::new()
+            worlds: Vec::new(),
+            registerer: HashMap::new()
         };
+
         locked.unwrap().write(output);
     }
 
     pub async fn create_world(&mut self) {
-        self.worlds.push(World::new(self.task_manager));
+        self.worlds.push(World::new(&self.task_manager, self.registerer.get("world").unwrap()));
     }
 
     pub fn notify_update() -> Duration {

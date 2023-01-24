@@ -1,4 +1,4 @@
-use core::util::types::{Vector2, Rectangle};
+use game::util::types::{Vector2, Rectangle};
 
 pub trait LayoutConstraint {
     fn constriction(&self, parent: &Vector2) -> f32;

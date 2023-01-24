@@ -15,8 +15,8 @@ impl Entity {
         }
     }
 
-    pub fn spawn(mut self, world: &mut WorldData) {
-
+    pub fn spawn(mut self, _world: &mut WorldData) {
+        todo!();
     }
 
     fn get_next_id() -> u64 {

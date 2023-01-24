@@ -1,5 +1,6 @@
 use json::JsonValue;
 
+#[derive(Clone)]
 pub struct ContentPack {
-    types: Vec<JsonValue>
+    pub types: Vec<JsonValue>
 }

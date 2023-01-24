@@ -1,9 +1,8 @@
 use anyhow::Error;
 use json::JsonValue;
 use game::rendering::mesh::Mesh;
-use game::rendering::renderable::Renderable;
 use game::resources::resource_manager::{ResourceManager};
-use game::util::types::{Rectangle, Vector2};
+use game::util::types::Rectangle;
 
 pub struct UIComponent {
     children: Vec<UIComponent>,
@@ -23,7 +22,7 @@ impl UIComponent {
     }
 }
 
-impl Renderable for UIComponent {
+/*impl Renderable for UIComponent {
     fn data(&self) -> Vec<&Mesh> {
         let mut meshes = Vec::new();
         for child in &self.children {
@@ -37,7 +36,7 @@ impl Renderable for UIComponent {
         }
         return meshes;
     }
-}
+}*/
 
 pub trait UIContent {
     fn render(&self, parent: Rectangle) -> Vec<&Mesh>;

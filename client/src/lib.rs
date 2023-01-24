@@ -32,8 +32,8 @@ static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../resources");
 pub mod debug;
 pub mod display;
 pub mod input;
-pub mod resources;
 pub mod renderer;
+pub mod resources;
 pub mod ui;
 pub mod client;
 pub mod settings;
@@ -54,6 +54,7 @@ pub async fn run() {
         .thread_stack_size(3 * 1024 * 1024)
         .build().unwrap();
 
-    GameWindow::run(Game::new(JoinSet::new(), Box::new(WebLoader::new(RESOURCES)),
-                              TaskManager::new(cpu_runtime, io_runtime))).await;
+    Game::init(JoinSet::new(), Box::new(WebLoader::new(RESOURCES)),
+              TaskManager::new(cpu_runtime, io_runtime)).await;
+    GameWindow::run().await;
 }

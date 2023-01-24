@@ -33,6 +33,7 @@ impl ResourceManager {
 
     pub fn finish_loading(game: &mut Game, handle: &AllocHandle) {
         let content = handle.read::<ContentPack>();
+        game.resource_manager.load_all(content.types);
     }
 
     pub fn get_type(&self, name: &str) -> Option<&Arc<dyn NamedType + Send + Sync>> {

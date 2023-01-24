@@ -1,5 +1,5 @@
 use std::time::Duration;
-use core::settings::Settings;
+use game::settings::Settings;
 use macros::JsonResource;
 use json::JsonValue;
 use crate::input::manager::InputManager;

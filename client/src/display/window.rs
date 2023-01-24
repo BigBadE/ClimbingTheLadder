@@ -1,23 +1,27 @@
+use anyhow::Error;
 use instant::Instant;
+use wgpu::{Device, Queue, Surface, SurfaceError};
 use winit::dpi::PhysicalSize;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
+use game::error;
 use crate::client::Client;
 use crate::settings::GameSettings;
 
 pub struct GameWindow {
     pub settings: GameSettings,
     pub modifiers: u32,
-    surface: wgpu::Surface,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    config: wgpu::SurfaceConfiguration,
-    size: PhysicalSize<u32>
+    pub surface: Surface,
+    pub device: Device,
+    pub queue: Queue,
+    pub inner: Window,
+    pub size: (u32, u32),
+    config: wgpu::SurfaceConfiguration
 }
 
 impl GameWindow {
-    async fn new(window: &Window) -> Self {
+    async fn new(window: Window) -> Self {
         let size = window.inner_size();
         //Make sure it's >0 or it may crash
         let size = PhysicalSize::new(size.width.max(1), size.height.max(1));
@@ -65,8 +69,9 @@ impl GameWindow {
             surface,
             device,
             queue,
+            inner: window,
             config,
-            size
+            size: (size.width, size.height)
         };
     }
 
@@ -95,7 +100,7 @@ impl GameWindow {
         }
 
         let id = window.id();
-        let window = GameWindow::new(&window).await;
+        let window = GameWindow::new(window).await;
         let mut context = Client::new(window);
         let mut next_frame = context.rendering_time(Instant::now());
         event_loop.run(move |ev, _, control_flow| {
@@ -138,10 +143,14 @@ impl GameWindow {
                         }
                         _ => return,
                     }
-
+                Event::RedrawRequested(window_id) if id == window_id => {
+                    if context.render() {
+                        *control_flow = ControlFlow::Exit;
+                    }
+                }
                 Event::MainEventsCleared => {
                     if rendering {
-                        context.render();
+                        context.request_redraw();
                     } else {
                         context.update();
                     }
@@ -153,7 +162,7 @@ impl GameWindow {
 
     pub fn resize(&mut self, size: (u32, u32)) {
         if size.0 > 0 && size.1 > 0 {
-            self.size = PhysicalSize::new(size.0, size.1);
+            self.size = size;
             self.config.width = size.0;
             self.config.height = size.1;
             self.surface.configure(&self.device, &self.config);

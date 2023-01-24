@@ -1,9 +1,11 @@
+use anyhow::Error;
 use instant::Instant;
+use wgpu::SurfaceError;
 use winit::event::{ElementState, KeyboardInput, ModifiersState, MouseButton};
 use crate::display::window::GameWindow;
 use crate::renderer::renderer::GameRenderer;
 use crate::ui::manager::UIManager;
-use game::Game;
+use game::{error, Game};
 
 pub struct Client {
     next_update: Instant,
@@ -22,8 +24,26 @@ impl Client {
         };
     }
 
-    pub fn render(&mut self) {
-        self.renderer.render(&mut self.window);
+    pub fn render(&mut self) -> bool {
+        return match self.renderer.render(&mut self.window) {
+            Ok(()) => false,
+            // Reconfigure the surface if lost
+            Err(SurfaceError::Lost) => {
+                self.resize(self.window.size);
+                false
+            },
+            // The system is out of memory, we should probably quit
+            Err(SurfaceError::OutOfMemory) => true,
+            // All other errors (Outdated, Timeout) should be resolved by the next frame
+            Err(e) => {
+                error!("{:?}", e);
+                false
+            }
+        }
+    }
+
+    pub fn request_redraw(&self) {
+        self.window.inner.request_redraw();
     }
 
     pub fn update(&mut self) {

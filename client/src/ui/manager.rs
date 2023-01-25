@@ -1,3 +1,8 @@
+use std::ops::Deref;
+use std::sync::{Arc, Mutex};
+use game::rendering::mesh::{FrameData, Mesh, Vertex};
+use game::rendering::renderable::Renderable;
+use game::rendering::renderer::Renderer;
 use crate::ui::window::UIWindow;
 
 pub struct UIManager {
@@ -24,14 +29,15 @@ impl UIManager {
     }
 }
 
-/*impl Renderable for UIManager {
-    fn data(&self) -> Vec<&Mesh> {
-        let mut meshes = Vec::new();
-        for window in &self.windows {
-            for mesh in window.data() {
-                meshes.push(mesh);
-            }
-        }
-        return meshes;
+impl Renderable for UIManager {
+    fn set_handle(&mut self, renderer: Arc<Mutex<Box<dyn Renderer>>>) {
+        let mut mesh = Mesh::new("shader".to_string());
+        mesh.vertexes.push(Vertex::new([0f32, 0f32, 0f32], [0f32, 0f32]));
+        mesh.vertexes.push(Vertex::new([10f32, 0f32, 0f32], [0f32, 0f32]));
+        mesh.vertexes.push(Vertex::new([10f32, 10f32, 0f32], [0f32, 0f32]));
+        mesh.indices.push(0);
+        mesh.indices.push(1);
+        mesh.indices.push(2);
+        renderer.deref().lock().ok().unwrap().push(mesh, FrameData::new());
     }
-}*/
+}

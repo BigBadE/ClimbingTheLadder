@@ -54,7 +54,7 @@ pub async fn run() {
         .thread_stack_size(3 * 1024 * 1024)
         .build().unwrap();
 
-    Game::init(JoinSet::new(), Box::new(WebLoader::new(RESOURCES)),
-              TaskManager::new(cpu_runtime, io_runtime)).await;
-    GameWindow::run().await;
+    let game = Game::new(JoinSet::new(), Box::new(WebLoader::new(RESOURCES)),
+              TaskManager::new(cpu_runtime, io_runtime));
+    GameWindow::run(game).await;
 }

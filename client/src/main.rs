@@ -2,10 +2,9 @@
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
 use std::env;
-use tokio::runtime::Builder;
+use tokio::runtime::{Builder, Handle};
 use game::Game;
 use game::util::task_manager::TaskManager;
-use crate::client::Client;
 use crate::display::window::GameWindow;
 use crate::mods::mod_loader::load_mods;
 use crate::resources::desktop_loader::DesktopLoader;
@@ -40,8 +39,9 @@ fn main() {
         .thread_stack_size(3 * 1024 * 1024)
         .build().unwrap();
 
-    main_runtime.spawn(Game::init(load_mods(&io_runtime), Box::new(
+    let game = Game::new(load_mods(&io_runtime), Box::new(
         DesktopLoader::new(env::current_dir().unwrap().join("resources"))),
-              TaskManager::new(cpu_runtime, io_runtime)));
-    main_runtime.block_on(GameWindow::run());
+              TaskManager::new(
+                  cpu_runtime.handle().clone(), io_runtime.handle().clone()));
+    main_runtime.block_on(GameWindow::run(game));
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use anyhow::Error;
-use wgpu::{Color, CommandEncoderDescriptor, LoadOp, Operations, RenderPassColorAttachment, RenderPassDescriptor, TextureViewDescriptor};
+use wgpu::{Color, CommandEncoderDescriptor, LoadOp, Operations, RenderPassColorAttachment,
+           RenderPassDescriptor, SurfaceError, TextureViewDescriptor};
 use game::rendering::mesh::{FrameData, Mesh};
 use game::rendering::renderer::Renderer;
 use game::resources::content_pack::ContentPack;
@@ -22,14 +22,14 @@ impl GameRenderer {
         }
     }
 
-    pub fn render(&self, window: &mut GameWindow) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&self, window: &mut GameWindow) -> Result<(), SurfaceError> {
         let output = window.surface.get_current_texture()?;
         let view = output.texture.create_view(&TextureViewDescriptor::default());
         let mut encoder = window.device.create_command_encoder(&CommandEncoderDescriptor {
             label: Some("Render Encoder"),
         });
         {
-            let _render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
+            let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(RenderPassColorAttachment {
                     view: &view,
@@ -46,15 +46,17 @@ impl GameRenderer {
                 })],
                 depth_stencil_attachment: None
             });
+
+            for (mesh, data) in self.rendering.values() {
+                render_pass.set_pipeline(&self.shaders.shaders.get(&mesh.shader).unwrap().0);
+                render_pass.draw(
+                    0..mesh.vertexes.len() as u32, 0..mesh.vertexes.len() as u32/3);
+            }
         }
 
         // submit will accept anything that implements IntoIter
         window.queue.submit(std::iter::once(encoder.finish()));
         output.present();
-
-        for (mesh, data) in self.rendering.values() {
-
-        }
 
         return Ok(());
     }

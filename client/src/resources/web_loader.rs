@@ -2,9 +2,7 @@
 use include_dir::Dir;
 use json::JsonValue;
 use game::language::language::LanguagePack;
-use game::mods::mods::GameMod;
 use game::resources::content_pack::ContentPack;
-use game::resources::ContentLoader;
 
 pub struct WebLoader {
 

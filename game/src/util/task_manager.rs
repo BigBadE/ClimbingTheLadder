@@ -1,5 +1,5 @@
 use std::future::Future;
-use tokio::runtime::Runtime;
+use tokio::runtime::{Handle, Runtime};
 use tokio::task::JoinHandle;
 
 use crate::{error, Game};
@@ -11,13 +11,13 @@ pub struct Task {
 }
 
 pub struct TaskManager {
-    cpu_runtime: Runtime,
-    io_runtime: Runtime,
+    cpu_runtime: Handle,
+    io_runtime: Handle,
     tasks: Vec<Task>
 }
 
 impl TaskManager {
-    pub fn new(cpu_runtime: Runtime, io_runtime: Runtime) -> Self {
+    pub fn new(cpu_runtime: Handle, io_runtime: Handle) -> Self {
         return Self {
             cpu_runtime,
             io_runtime,
@@ -25,7 +25,7 @@ impl TaskManager {
         };
     }
 
-    pub fn get_runtime(&self, io: bool) -> &Runtime {
+    pub fn get_runtime(&self, io: bool) -> &Handle {
         return if io {
             &self.io_runtime
         } else {

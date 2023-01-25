@@ -8,6 +8,7 @@ use tokio::runtime::Runtime;
 use tokio::task::{JoinHandle, JoinSet};
 use game::mods::mod_trait::ModMain;
 use game::mods::mods::{GameMod, ModManifest};
+use crate::DesktopLoader;
 
 pub fn load_mods(runtime: &Runtime) -> JoinSet<Result<GameMod, Error>> {
     let mod_folder = env::current_dir().ok().unwrap().join("mods");
@@ -44,5 +45,5 @@ async fn load_mod(mod_folder: DirEntry) -> Result<GameMod, Error> {
         }
     };
     let func: Symbol<unsafe extern fn() -> Box<dyn ModMain + Send>> = unsafe { library.get(manifest.main.as_bytes())? };
-    return Ok(GameMod::new(manifest, mod_folder.path(), unsafe { func() }));
+    return Ok(GameMod::new(manifest, Box::new(DesktopLoader::new(mod_folder.path())), unsafe { func() }));
 }

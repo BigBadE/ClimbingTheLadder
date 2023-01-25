@@ -1,4 +1,3 @@
-use anyhow::Error;
 use instant::Instant;
 use wgpu::SurfaceError;
 use winit::event::{ElementState, KeyboardInput, ModifiersState, MouseButton};
@@ -8,17 +7,19 @@ use crate::ui::manager::UIManager;
 use game::{error, Game};
 
 pub struct Client {
-    next_update: Instant,
+    game: Game,
     window: GameWindow,
+    next_update: Instant,
     ui_manager: UIManager,
     renderer: GameRenderer
 }
 
 impl Client {
-    pub fn new(window: GameWindow) -> Self {
+    pub fn new(window: GameWindow, game: Game) -> Self {
         return Self {
-            next_update: Instant::now(),
+            game,
             window,
+            next_update: Instant::now(),
             renderer: GameRenderer::new(),
             ui_manager: UIManager::new()
         };
@@ -47,7 +48,7 @@ impl Client {
     }
 
     pub fn update(&mut self) {
-        self.next_update += Game::notify_update();
+        self.next_update += self.game.notify_update();
     }
 
     pub(crate) fn key_modifier_change(&mut self, modifiers: &ModifiersState) {

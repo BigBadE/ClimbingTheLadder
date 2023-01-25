@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
 use json::JsonValue;
+use lazy_static::lazy_static;
 use crate::error;
 
 pub enum LanguagePack {
@@ -8,16 +9,18 @@ pub enum LanguagePack {
 }
 
 pub struct LanguageManager {
-    translations: Box<HashMap<String, String>>
+    translations: Box<HashMap<String, String>>,
 }
 
-pub static LANGUAGE_MANAGER: RwLock<LanguageManager> = RwLock::new(LanguageManager::new());
+lazy_static! {
+    pub static ref LANGUAGE_MANAGER: RwLock<LanguageManager> = RwLock::new(LanguageManager::new());
+}
 
 impl LanguageManager {
     fn new() -> Self {
         return Self {
             translations: Box::new(HashMap::new())
-        }
+        };
     }
 
     pub fn translate(&self, input: &String) -> String {

@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::mem::MaybeUninit;
-use std::sync::Mutex;
-use std::time::Duration;
+use std::sync::{Mutex, RwLock};
+use std::time::{Duration, Instant};
 use anyhow::Error;
 use tokio::task::JoinSet;
-use crate::resources::ContentLoader;
 use crate::mods::mod_manager::ModManager;
 use crate::mods::mods::GameMod;
 use crate::register::ThingRegister;
+use crate::resources::content_pack::ContentPack;
 use crate::resources::resource_manager::ResourceManager;
 use crate::settings::Settings;
 use crate::util::task_manager::TaskManager;
@@ -22,7 +22,7 @@ pub mod util;
 pub mod world;
 pub mod settings;
 
-static GAME_MUTEX: Mutex<MaybeUninit<Game>> = Mutex::new(MaybeUninit::uninit());
+pub static NEXT_UPDATE: RwLock<Option<Instant>> = RwLock::new(Option::None);
 
 pub struct Game {
     pub settings: Settings,
@@ -30,57 +30,48 @@ pub struct Game {
     worlds: Vec<World>,
     resource_manager: ResourceManager,
     mods: ModManager,
-    registerer: HashMap<&'static str, Box<dyn ThingRegister + Send + Sync>>
+    registerer: HashMap<&'static str, Box<dyn ThingRegister + Send + Sync>>,
 }
 
 impl Game {
-    pub async fn init(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentLoader + Send>,
-                     mut task_manager: TaskManager) {
-        //Hold the lock until inited.
-        let locked = GAME_MUTEX.lock();
-
+    pub fn new(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentPack + Send>,
+                     task_manager: TaskManager) -> Self {
         let settings = Settings::new();
         let resource_manager = ResourceManager::new();
-        task_manager.queue_after(true, ResourceManager::load_types(content), ResourceManager::finish_loading);
 
-        let output = Self {
+        return Self {
             settings,
             task_manager,
             resource_manager,
             mods: ModManager::new(mods),
             worlds: Vec::new(),
-            registerer: HashMap::new()
+            registerer: HashMap::new(),
         };
-
-        locked.unwrap().write(output);
     }
 
     pub async fn create_world(&mut self) {
         self.worlds.push(World::new(&self.task_manager, self.registerer.get("world").unwrap()));
     }
 
-    pub fn notify_update() -> Duration {
-        unsafe {
-            let mut game = GAME_MUTEX.lock().unwrap();
-            let game = game.assume_init_mut();
-            //Poll tasks
-            let mut polled = game.task_manager.poll();
-            //If one task is finished, poll the next.
-            while polled.1.is_some() {
-                polled.1.unwrap().call(game);
-                polled = game.task_manager.poll();
-            }
-
-            //Skip update if it's running a long task.
-            if polled.0 == false {
-                return game.settings.updates_per_second;
-            }
-
-            for world in &mut game.worlds {
-                world.update();
-            }
-            return game.settings.updates_per_second;
+    pub fn notify_update(&mut self) -> Duration {
+        //Poll tasks
+        let mut polled = self.task_manager.poll();
+        //If one task is finished, poll the next.
+        while polled.1.is_some() {
+            polled.1.unwrap().call(self);
+            polled = self.task_manager.poll();
         }
+
+        //Skip update if it's running a long task.
+        if polled.0 == false {
+            return self.settings.updates_per_second;
+        }
+
+        for world in &mut self.worlds {
+            world.update();
+        }
+
+        return self.settings.updates_per_second;
     }
 }
 

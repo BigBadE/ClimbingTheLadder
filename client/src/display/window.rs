@@ -1,11 +1,10 @@
-use anyhow::Error;
 use instant::Instant;
-use wgpu::{Device, Queue, RenderPipeline, Surface, SurfaceError};
+use wgpu::{Device, Queue, Surface, SurfaceConfiguration};
 use winit::dpi::PhysicalSize;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
-use game::error;
+use game::Game;
 use crate::client::Client;
 use crate::settings::GameSettings;
 
@@ -17,8 +16,7 @@ pub struct GameWindow {
     pub queue: Queue,
     pub inner: Window,
     pub size: (u32, u32),
-    pub pipeline: RenderPipeline,
-    config: wgpu::SurfaceConfiguration
+    pub config: SurfaceConfiguration
 }
 
 impl GameWindow {
@@ -54,7 +52,7 @@ impl GameWindow {
             None, // Trace path
         ).await.unwrap();
 
-        let config = wgpu::SurfaceConfiguration {
+        let config = SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface.get_supported_formats(&adapter)[0],
             width: size.width,
@@ -76,7 +74,7 @@ impl GameWindow {
         };
     }
 
-    pub async fn run() {
+    pub async fn run(game: Game) {
         let event_loop = EventLoop::new();
 
         let window = WindowBuilder::new().build(&event_loop).unwrap();
@@ -102,7 +100,7 @@ impl GameWindow {
 
         let id = window.id();
         let window = GameWindow::new(window).await;
-        let mut context = Client::new(window);
+        let mut context = Client::new(window, game);
         let mut next_frame = context.rendering_time(Instant::now());
         event_loop.run(move |ev, _, control_flow| {
             let rendering;

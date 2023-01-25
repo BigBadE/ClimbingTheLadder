@@ -558,7 +558,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "json",
- "linkme",
+ "lazy_static",
  "macros",
  "tokio",
 ]

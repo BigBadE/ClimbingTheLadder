@@ -3,10 +3,8 @@ use std::sync::Arc;
 use anyhow::Error;
 use json::JsonValue;
 use json::object::Object;
-use crate::{error, Game};
+use crate::error;
 use crate::resources::content_pack::ContentPack;
-use crate::resources::ContentLoader;
-use crate::util::alloc_handle::AllocHandle;
 
 pub struct ResourceManager {
     //Instantiators
@@ -24,16 +22,6 @@ impl ResourceManager {
             types: HashMap::new(),
             named_types: HashMap::new()
         }
-    }
-
-    pub async fn load_types(content: Box<dyn ContentLoader + Send>) -> AllocHandle {
-        let mut content = content.load_main_content();
-        return AllocHandle::new(&mut content);
-    }
-
-    pub fn finish_loading(game: &mut Game, handle: &AllocHandle) {
-        let content = handle.read::<ContentPack>();
-        game.resource_manager.load_all(content.types);
     }
 
     pub fn get_type(&self, name: &str) -> Option<&Arc<dyn NamedType + Send + Sync>> {

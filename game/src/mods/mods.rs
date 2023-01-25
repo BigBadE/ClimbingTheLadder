@@ -10,12 +10,12 @@ use crate::resources::content_pack::ContentPack;
 //A loaded mod
 pub struct GameMod {
     manifest: ModManifest,
-    content: Box<dyn ContentPack>,
+    content: Box<dyn ContentPack + Send>,
     main: Box<dyn ModMain + Send>
 }
 
 impl GameMod {
-    pub fn new(manifest: ModManifest, content: Box<dyn ContentPack>, main: Box<dyn ModMain + Send>) -> Self {
+    pub fn new(manifest: ModManifest, content: Box<dyn ContentPack + Send>, main: Box<dyn ModMain + Send>) -> Self {
         return Self {
             manifest,
             content,

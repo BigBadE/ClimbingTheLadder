@@ -10,7 +10,7 @@ macros = { path = "../macros" }
 
 # Util
 anyhow = "1.0.66"
-linkme = "0.3.7"
+lazy_static = "1.4.0"
 
 # Resources
 json = "0.12.4"

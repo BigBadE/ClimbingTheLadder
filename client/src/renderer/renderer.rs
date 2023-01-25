@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use anyhow::Error;
-use wgpu::{Color, CommandEncoderDescriptor, LoadOp, RenderPassColorAttachment, RenderPassDescriptor, TextureViewDescriptor};
+use wgpu::{Color, CommandEncoderDescriptor, LoadOp, Operations, RenderPassColorAttachment, RenderPassDescriptor, TextureViewDescriptor};
 use game::rendering::mesh::{FrameData, Mesh};
 use game::rendering::renderer::Renderer;
 use crate::display::window::GameWindow;
@@ -30,17 +30,17 @@ impl GameRenderer {
                 color_attachments: &[Some(RenderPassColorAttachment {
                     view: &view,
                     resolve_target: None,
-                    ops: wgpu::Operations {
+                    ops: Operations {
                         load: LoadOp::Clear(Color {
                             r: 0.1,
                             g: 0.2,
                             b: 0.3,
-                            a: 1.0,
+                            a: 1.0
                         }),
-                        store: true,
-                    },
+                        store: true
+                    }
                 })],
-                depth_stencil_attachment: None,
+                depth_stencil_attachment: None
             });
         }
 

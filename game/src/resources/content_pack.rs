@@ -1,6 +1,10 @@
 use json::JsonValue;
+use crate::language::language::{LanguageManager, LanguagePack};
 
-#[derive(Clone)]
-pub struct ContentPack {
-    pub types: Vec<JsonValue>
+pub trait ContentPack {
+    fn shaders(&self) -> Vec<String>;
+    
+    fn types(&self) -> Vec<JsonValue>;
+    
+    fn language(&self) -> Vec<LanguagePack>;
 }

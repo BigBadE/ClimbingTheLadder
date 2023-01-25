@@ -13,6 +13,7 @@ use crate::settings::Settings;
 use crate::util::task_manager::TaskManager;
 use crate::world::world::World;
 
+pub mod language;
 pub mod mods;
 pub mod register;
 pub mod rendering;

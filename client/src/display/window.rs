@@ -1,6 +1,6 @@
 use anyhow::Error;
 use instant::Instant;
-use wgpu::{Device, Queue, Surface, SurfaceError};
+use wgpu::{Device, Queue, RenderPipeline, Surface, SurfaceError};
 use winit::dpi::PhysicalSize;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -17,6 +17,7 @@ pub struct GameWindow {
     pub queue: Queue,
     pub inner: Window,
     pub size: (u32, u32),
+    pub pipeline: RenderPipeline,
     config: wgpu::SurfaceConfiguration
 }
 

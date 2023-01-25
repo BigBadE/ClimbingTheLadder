@@ -5,19 +5,20 @@ use anyhow::Error;
 use json::JsonValue;
 use macros::JsonResource;
 use crate::mods::mod_trait::ModMain;
+use crate::resources::content_pack::ContentPack;
 
 //A loaded mod
 pub struct GameMod {
     manifest: ModManifest,
-    content_root: PathBuf,
+    content: Box<dyn ContentPack>,
     main: Box<dyn ModMain + Send>
 }
 
 impl GameMod {
-    pub fn new(manifest: ModManifest, content_root: PathBuf, main: Box<dyn ModMain + Send>) -> Self {
+    pub fn new(manifest: ModManifest, content: Box<dyn ContentPack>, main: Box<dyn ModMain + Send>) -> Self {
         return Self {
             manifest,
-            content_root,
+            content,
             main
         }
     }

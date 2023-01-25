@@ -11,7 +11,7 @@ pub struct WebLoader {
 }
 
 impl ContentPack for WebLoader {
-    fn shaders(&self) -> Vec<String> {
+    fn shaders(&self) -> Vec<(String, String)> {
         todo!()
     }
 

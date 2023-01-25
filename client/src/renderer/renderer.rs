@@ -3,10 +3,13 @@ use anyhow::Error;
 use wgpu::{Color, CommandEncoderDescriptor, LoadOp, Operations, RenderPassColorAttachment, RenderPassDescriptor, TextureViewDescriptor};
 use game::rendering::mesh::{FrameData, Mesh};
 use game::rendering::renderer::Renderer;
+use game::resources::content_pack::ContentPack;
 use crate::display::window::GameWindow;
+use crate::renderer::shaders::ShaderManager;
 
 pub struct GameRenderer {
     last_id: u64,
+    shaders: ShaderManager,
     rendering: HashMap<u64, (Mesh, FrameData)>
 }
 
@@ -14,6 +17,7 @@ impl GameRenderer {
     pub fn new() -> Self {
         return Self {
             last_id: 0,
+            shaders: ShaderManager::new(),
             rendering: HashMap::new()
         }
     }
@@ -53,6 +57,12 @@ impl GameRenderer {
         }
 
         return Ok(());
+    }
+
+    pub fn load_content(&mut self, window: &mut GameWindow, content: Box<dyn ContentPack>) {
+        for (name, source) in content.shaders() {
+            self.shaders.load(window, name, source);
+        }
     }
 }
 

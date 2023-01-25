@@ -13,11 +13,12 @@ pub struct DesktopLoader {
 }
 
 impl ContentPack for DesktopLoader {
-    fn shaders(&self) -> Vec<String> {
+    fn shaders(&self) -> Vec<(String, String)> {
         let mut output = Vec::new();
         for file in fs::read_dir(self.root.join("shaders")).unwrap() {
             let file = file.unwrap();
-            output.push(String::from_utf8(fs::read(file).unwrap()).unwrap());
+            output.push((file.file_name().into_string().unwrap().split('.').nth(0).unwrap().to_string(),
+                         String::from_utf8(fs::read(file).unwrap()).unwrap()));
         }
         return output;
     }

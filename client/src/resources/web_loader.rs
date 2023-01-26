@@ -4,6 +4,7 @@ use json::JsonValue;
 use game::language::language::LanguagePack;
 use game::resources::content_pack::ContentPack;
 
+#[derive(Clone)]
 pub struct WebLoader {
 
 }

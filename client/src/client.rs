@@ -1,38 +1,50 @@
+use std::ops::Deref;
+use std::sync::{Arc, Mutex};
 use instant::Instant;
 use wgpu::SurfaceError;
 use winit::event::{ElementState, KeyboardInput, ModifiersState, MouseButton};
 use crate::display::window::GameWindow;
-use crate::renderer::renderer::GameRenderer;
+use crate::renderer::renderer::{GameRenderer, RenderData};
 use crate::ui::manager::UIManager;
 use game::{error, Game};
+use game::rendering::renderable::Renderable;
+use game::rendering::renderer::Renderer;
+use game::resources::content_pack::ContentPack;
+use crate::renderer::shaders::ShaderManager;
 
 pub struct Client {
     game: Game,
     window: GameWindow,
     next_update: Instant,
     ui_manager: UIManager,
-    renderer: GameRenderer
+    render_data: Arc<Mutex<Box<dyn Renderer>>>,
 }
 
 impl Client {
-    pub fn new(window: GameWindow, game: Game) -> Self {
-        return Self {
+    pub fn new(window: GameWindow, mut game: Game, content: Box<dyn ContentPack>) -> Self {
+        game.task_manager.queue(false, ShaderManager::load(window.device.clone(),
+                                                           window.config.clone(), content));
+
+        let mut temp = Self {
             game,
             window,
             next_update: Instant::now(),
-            renderer: GameRenderer::new(),
-            ui_manager: UIManager::new()
+            ui_manager: UIManager::new(),
+            render_data: Arc::new(Mutex::new(Box::new(RenderData::new()))),
         };
+        temp.ui_manager.set_handle(&mut temp.render_data);
+        return temp;
     }
 
     pub fn render(&mut self) -> bool {
-        return match self.renderer.render(&mut self.window) {
+        let result = GameRenderer::render(&mut self.window, self.render_data.lock().unwrap().deref());
+        return match result {
             Ok(()) => false,
             // Reconfigure the surface if lost
             Err(SurfaceError::Lost) => {
                 self.resize(self.window.size);
                 false
-            },
+            }
             // The system is out of memory, we should probably quit
             Err(SurfaceError::OutOfMemory) => true,
             // All other errors (Outdated, Timeout) should be resolved by the next frame
@@ -40,7 +52,7 @@ impl Client {
                 error!("{:?}", e);
                 false
             }
-        }
+        };
     }
 
     pub fn request_redraw(&self) {

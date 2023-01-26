@@ -1,32 +1,43 @@
 use std::fs;
-use std::fs::File;
 use std::path::PathBuf;
+use anyhow::Error;
 use json::JsonValue;
+use game::error;
 use game::language::language::LanguagePack;
 use game::resources::content_pack::ContentPack;
 
+#[derive(Clone)]
 pub struct DesktopLoader {
-    root: PathBuf
+    root: PathBuf,
 }
 
 impl ContentPack for DesktopLoader {
     fn shaders(&self) -> Vec<(String, String)> {
-        let mut output = Vec::new();
-        for file in fs::read_dir(self.root.join("shaders")).unwrap() {
-            let file = file.unwrap();
-            output.push((file.file_name().into_string().unwrap().split('.').nth(0).unwrap().to_string(),
-                         String::from_utf8(fs::read(file.path()).unwrap()).unwrap()));
+        return match DesktopLoader::load_text(self.root.join("shaders")) {
+            Ok(result) => result,
+            Err(error) => {
+                error!("Error loading shaders: {}", error);
+                return Vec::new();
+            }
         }
-        return output;
     }
 
     fn types(&self) -> Vec<JsonValue> {
-        return DesktopLoader::load_json(self.root.join("types"));
+        return match DesktopLoader::load_json(self.root.join("types")) {
+            Ok(result) => result,
+            Err(error) => {
+                error!("Error loading JSON types: {}", error);
+                return Vec::new();
+            }
+        }
     }
 
     fn language(&self) -> Vec<LanguagePack> {
         let mut output = Vec::new();
-        output.push(LanguagePack::Translations(DesktopLoader::load_json(self.root.join("language/translations"))));
+        match DesktopLoader::load_json(self.root.join("language/translations")) {
+            Ok(result) => output.push(LanguagePack::Translations(result)),
+            Err(error) => error!("Error loading translations: {}", error)
+        }
         return output;
     }
 }
@@ -35,19 +46,32 @@ impl DesktopLoader {
     pub fn new(root: PathBuf) -> Self {
         return Self {
             root
-        }
+        };
     }
 
-    fn load_json(directory: PathBuf) -> Vec<JsonValue> {
+    fn load_text(directory: PathBuf) -> Result<Vec<(String, String)>, Error> {
         if !directory.exists() {
-            return Vec::new();
+            return Ok(Vec::new());
+        }
+
+        let mut output = Vec::new();
+        for file in fs::read_dir(directory)? {
+            let file = file?;
+            output.push((file.file_name().into_string().ok().unwrap().split('.').nth(0).unwrap().to_string(),
+                         String::from_utf8(fs::read(file.path())?)?));
+        }
+        return Ok(output);
+    }
+
+    fn load_json(directory: PathBuf) -> Result<Vec<JsonValue>, Error> {
+        if !directory.exists() {
+            return Ok(Vec::new());
         }
         let mut output = Vec::new();
-        for file in fs::read_dir(directory).unwrap() {
-            let file = file.unwrap();
+        for file in fs::read_dir(directory)? {
             output.push(json::parse(
-                String::from_utf8(fs::read(file.path()).unwrap()).unwrap().as_str()).unwrap());
+                String::from_utf8(fs::read(file?.path())?)?.as_str())?);
         }
-        return output;
+        return Ok(output);
     }
 }

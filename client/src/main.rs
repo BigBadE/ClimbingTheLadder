@@ -39,9 +39,15 @@ fn main() {
         .thread_stack_size(3 * 1024 * 1024)
         .build().unwrap();
 
-    let game = Game::new(load_mods(&io_runtime), Box::new(
-        DesktopLoader::new(env::current_dir().unwrap().join("resources"))),
-              TaskManager::new(
-                  cpu_runtime.handle().clone(), io_runtime.handle().clone()));
-    main_runtime.block_on(GameWindow::run(game));
+    let mut directory = env::current_dir().unwrap().join("resources");
+    if !directory.exists() {
+        directory = env::current_dir().unwrap().join("../resources");
+        if !directory.exists() {
+            panic!("Couldn't find resources directory!");
+        }
+    }
+    let content = Box::new(DesktopLoader::new(directory));
+    let game = Game::new(load_mods(&io_runtime), content.clone(),
+              TaskManager::new(cpu_runtime.handle().clone(), io_runtime.handle().clone()));
+    main_runtime.block_on(GameWindow::run(game, content));
 }

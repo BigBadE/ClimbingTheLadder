@@ -1,3 +1,5 @@
+use std::ops::Deref;
+use std::sync::{Arc, Mutex};
 use instant::Instant;
 use wgpu::{Device, Queue, Surface, SurfaceConfiguration};
 use winit::dpi::PhysicalSize;
@@ -5,6 +7,7 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
 use game::Game;
+use game::resources::content_pack::ContentPack;
 use crate::client::Client;
 use crate::settings::GameSettings;
 
@@ -12,7 +15,7 @@ pub struct GameWindow {
     pub settings: GameSettings,
     pub modifiers: u32,
     pub surface: Surface,
-    pub device: Device,
+    pub device: Arc<Mutex<Device>>,
     pub queue: Queue,
     pub inner: Window,
     pub size: (u32, u32),
@@ -66,7 +69,7 @@ impl GameWindow {
             settings: GameSettings::new(),
             modifiers: 0,
             surface,
-            device,
+            device: Arc::new(Mutex::new(device)),
             queue,
             inner: window,
             config,
@@ -74,7 +77,7 @@ impl GameWindow {
         };
     }
 
-    pub async fn run(game: Game) {
+    pub async fn run(game: Game, content: Box<dyn ContentPack>) {
         let event_loop = EventLoop::new();
 
         let window = WindowBuilder::new().build(&event_loop).unwrap();
@@ -100,7 +103,7 @@ impl GameWindow {
 
         let id = window.id();
         let window = GameWindow::new(window).await;
-        let mut context = Client::new(window, game);
+        let mut context = Client::new(window, game, content);
         let mut next_frame = context.rendering_time(Instant::now());
         event_loop.run(move |ev, _, control_flow| {
             let rendering;
@@ -164,7 +167,7 @@ impl GameWindow {
             self.size = size;
             self.config.width = size.0;
             self.config.height = size.1;
-            self.surface.configure(&self.device, &self.config);
+            self.surface.configure(&self.device.lock().unwrap().deref(), &self.config);
         }
     }
 }

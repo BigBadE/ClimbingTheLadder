@@ -164,6 +164,7 @@ dependencies = [
  "include_dir",
  "instant",
  "json",
+ "lazy_static",
  "libloading",
  "linkme",
  "log",

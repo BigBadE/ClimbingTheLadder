@@ -1,10 +1,8 @@
 # Directories
 
-# Building
+# Building / Running
 
-Building on Windows requires Administrator rights.
-Run whatever program you use to build (cmd, Bash, VSC, IntelliJ, etc...)
-in administrator mode, or create the symlink in the build folder yourself.
+Just run ``cargo build`` or ``cargo run``
 
 # Warnings
 

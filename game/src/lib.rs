@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use std::mem::MaybeUninit;
-use std::sync::{Mutex, RwLock};
+use std::sync::RwLock;
 use std::time::{Duration, Instant};
 use anyhow::Error;
 use tokio::task::JoinSet;
@@ -22,19 +21,19 @@ pub mod util;
 pub mod world;
 pub mod settings;
 
-pub static NEXT_UPDATE: RwLock<Option<Instant>> = RwLock::new(Option::None);
+pub static NEXT_UPDATE: RwLock<Option<Instant>> = RwLock::new(None);
 
 pub struct Game {
     pub settings: Settings,
     pub task_manager: TaskManager,
+    pub resource_manager: ResourceManager,
     worlds: Vec<World>,
-    resource_manager: ResourceManager,
     mods: ModManager,
     registerer: HashMap<&'static str, Box<dyn ThingRegister + Send + Sync>>,
 }
 
 impl Game {
-    pub fn new(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentPack + Send>,
+    pub fn new(mods: JoinSet<Result<GameMod, Error>>, _content: Box<dyn ContentPack + Send>,
                      task_manager: TaskManager) -> Self {
         let settings = Settings::new();
         let resource_manager = ResourceManager::new();

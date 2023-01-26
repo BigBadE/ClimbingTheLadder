@@ -2,7 +2,6 @@
 name = "client"
 version = "0.1.0"
 edition = "2021"
-build = "build.rs"
 
 [dependencies]
 macros = { path = "../macros" }
@@ -24,6 +23,7 @@ anyhow = "1.0.66"
 instant = "0.1.12"
 log = "0.4"
 linkme = "0.3.7"
+lazy_static = "1.4.0"
 
 include_dir = "0.7.3"
 

@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use game::rendering::mesh::{FrameData, Mesh, Vertex};
 use game::rendering::renderable::Renderable;
@@ -30,7 +29,7 @@ impl UIManager {
 }
 
 impl Renderable for UIManager {
-    fn set_handle(&mut self, renderer: Arc<Mutex<Box<dyn Renderer>>>) {
+    fn set_handle(&mut self, renderer: &mut Arc<Mutex<Box<dyn Renderer>>>) {
         let mut mesh = Mesh::new("shader".to_string());
         mesh.vertexes.push(Vertex::new([0f32, 0f32, 0f32], [0f32, 0f32]));
         mesh.vertexes.push(Vertex::new([10f32, 0f32, 0f32], [0f32, 0f32]));
@@ -38,6 +37,6 @@ impl Renderable for UIManager {
         mesh.indices.push(0);
         mesh.indices.push(1);
         mesh.indices.push(2);
-        renderer.deref().lock().ok().unwrap().push(mesh, FrameData::new());
+        renderer.lock().unwrap().push(mesh, FrameData::new());
     }
 }

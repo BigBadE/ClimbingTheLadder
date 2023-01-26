@@ -19,6 +19,10 @@ impl UIManager {
         }
     }
 
+    pub fn update() {
+
+    }
+
     pub fn open(&mut self, window: UIWindow) {
         self.windows.push(window);
     }

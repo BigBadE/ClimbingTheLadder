@@ -1,18 +1,20 @@
 use std::{env, fs};
 use std::fs::DirEntry;
-use std::future::Future;
 use anyhow::Error;
 use libloading::{Library, Symbol};
 use log::error;
 use tokio::runtime::Runtime;
-use tokio::task::{JoinHandle, JoinSet};
+use tokio::task::JoinSet;
 use game::mods::mod_trait::ModMain;
 use game::mods::mods::{GameMod, ModManifest};
 use crate::DesktopLoader;
 
 pub fn load_mods(runtime: &Runtime) -> JoinSet<Result<GameMod, Error>> {
     let mod_folder = env::current_dir().ok().unwrap().join("mods");
-    fs::create_dir_all(&mod_folder).unwrap();
+    if !mod_folder.exists() {
+        return JoinSet::new();
+    }
+
     let mut output = JoinSet::new();
     for mod_folder in fs::read_dir(mod_folder).unwrap() {
         match mod_folder {

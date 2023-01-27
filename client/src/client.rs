@@ -1,14 +1,11 @@
-use std::ops::Deref;
-use std::sync::{Arc, Mutex};
 use instant::Instant;
 use wgpu::SurfaceError;
 use winit::event::{ElementState, KeyboardInput, ModifiersState, MouseButton};
 use crate::display::window::GameWindow;
-use crate::renderer::renderer::{GameRenderer, RenderData};
+use crate::renderer::renderer::{RENDERER, RENDERER_REF};
 use crate::ui::manager::UIManager;
 use game::{error, Game};
 use game::rendering::renderable::Renderable;
-use game::rendering::renderer::Renderer;
 use game::resources::content_pack::ContentPack;
 use crate::renderer::shaders::ShaderManager;
 
@@ -16,8 +13,7 @@ pub struct Client {
     game: Game,
     window: GameWindow,
     next_update: Instant,
-    ui_manager: UIManager,
-    render_data: Arc<Mutex<Box<dyn Renderer>>>,
+    ui_manager: UIManager
 }
 
 impl Client {
@@ -29,15 +25,14 @@ impl Client {
             game,
             window,
             next_update: Instant::now(),
-            ui_manager: UIManager::new(),
-            render_data: Arc::new(Mutex::new(Box::new(RenderData::new()))),
+            ui_manager: UIManager::new()
         };
-        temp.ui_manager.set_handle(&mut temp.render_data);
+        temp.ui_manager.set_handle(&RENDERER_REF);
         return temp;
     }
 
     pub fn render(&mut self) -> bool {
-        let result = GameRenderer::render(&mut self.window, self.render_data.lock().unwrap().deref());
+        let result = RENDERER.lock().unwrap().render(&mut self.window);
         return match result {
             Ok(()) => false,
             // Reconfigure the surface if lost

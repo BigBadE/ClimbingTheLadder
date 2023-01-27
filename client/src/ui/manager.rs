@@ -33,7 +33,7 @@ impl UIManager {
 }
 
 impl Renderable for UIManager {
-    fn set_handle(&mut self, renderer: &mut Arc<Mutex<Box<dyn Renderer>>>) {
+    fn set_handle(&mut self, renderer: &'static Box<dyn Renderer + Sync>) {
         let mut mesh = Mesh::new("shader".to_string());
         mesh.vertexes.push(Vertex::new([0f32, 0f32, 0f32], [0f32, 0f32]));
         mesh.vertexes.push(Vertex::new([10f32, 0f32, 0f32], [0f32, 0f32]));
@@ -41,6 +41,6 @@ impl Renderable for UIManager {
         mesh.indices.push(0);
         mesh.indices.push(1);
         mesh.indices.push(2);
-        renderer.lock().unwrap().push(mesh, FrameData::new());
+        renderer.push(mesh, FrameData::new());
     }
 }

@@ -16,6 +16,7 @@ json = "0.12.4"
 # Rendering
 winit = "0.27.5"
 wgpu = "0.14.2"
+bytemuck = { version = "1.12", features = [ "derive" ] }
 
 # Utility
 env_logger = "0.10.0"

@@ -11,6 +11,7 @@ macros = { path = "../macros" }
 # Util
 anyhow = "1.0.66"
 lazy_static = "1.4.0"
+bytemuck = { version = "1.12", features = [ "derive" ] }
 
 # Resources
 json = "0.12.4"

@@ -1,17 +1,39 @@
 use std::collections::HashMap;
-use wgpu::{Color, CommandEncoderDescriptor, LoadOp, Operations, RenderPassColorAttachment, RenderPassDescriptor, SurfaceError, TextureViewDescriptor};
+use std::ops::Deref;
+use std::sync::{Arc, Mutex};
+use lazy_static::lazy_static;
+use wgpu::{Color, CommandEncoderDescriptor, Device, LoadOp, Operations, RenderPassColorAttachment, RenderPassDescriptor, SurfaceError, TextureViewDescriptor};
 use game::error;
 use game::rendering::mesh::{FrameData, Mesh};
 use game::rendering::renderer::Renderer;
 use crate::display::window::GameWindow;
+use crate::renderer::rendering_data::RenderingData;
 use crate::renderer::shaders::SHADER_MANAGER;
 
-pub struct GameRenderer {
+lazy_static! {
+    pub static ref RENDERER: Mutex<GameRenderer> = Mutex::new(GameRenderer::new());
+}
 
+pub struct GameRenderer {
+    last_id: u64,
+    device: Option<Arc<Mutex<Device>>>,
+    rendering: HashMap<u64, RenderingData>
 }
 
 impl GameRenderer {
-    pub fn render(window: &mut GameWindow, data: &Box<dyn Renderer>) -> Result<(), SurfaceError> {
+    fn new() -> Self {
+        return Self {
+            last_id: 0,
+            device: None,
+            rendering: HashMap::new(),
+        }
+    }
+
+    pub(crate) fn init(&mut self, device: Arc<Mutex<Device>>) {
+        self.device = Some(device);
+    }
+
+    pub fn render(&self, window: &mut GameWindow) -> Result<(), SurfaceError> {
         let output = window.surface.get_current_texture()?;
         let view = output.texture.create_view(&TextureViewDescriptor::default());
         let mut encoder = window.device.lock().unwrap().create_command_encoder(&CommandEncoderDescriptor {
@@ -29,25 +51,28 @@ impl GameRenderer {
                             r: 0.1,
                             g: 0.2,
                             b: 0.3,
-                            a: 1.0
+                            a: 1.0,
                         }),
-                        store: true
-                    }
+                        store: true,
+                    },
                 })],
-                depth_stencil_attachment: None
+                depth_stencil_attachment: None,
             });
 
-            for (mesh, _data) in data.get_data().values() {
-                match shaders.shaders.get(&mesh.shader) {
-                    Some(shader) => render_pass.set_pipeline(&shader.0),
+            for data in self.rendering.values() {
+                match shaders.shaders.get(&data.shader) {
+                    Some(shader) => {
+                        render_pass.set_pipeline(&shader.0);
+                        render_pass.set_vertex_buffer(0, data.vertex_buffer.slice(..));
+                        render_pass.draw(
+                            0..data.vertex_buffer.size() as u32, 0..data.vertex_buffer.size() as u32 / 3);
+                    },
                     None => {
-                        error!("No loaded shader named {}. Loaded: {:?}", mesh.shader,
+                        error!("No loaded shader named {}. Loaded: {:?}", data.shader,
                             shaders.shaders.keys());
-                        continue
+                        continue;
                     }
                 }
-                render_pass.draw(
-                    0..mesh.vertexes.len() as u32, 0..mesh.vertexes.len() as u32/3);
             }
         }
 
@@ -57,40 +82,46 @@ impl GameRenderer {
 
         return Ok(());
     }
-}
 
-pub struct RenderData {
-    last_id: u64,
-    rendering: HashMap<u64, (Mesh, FrameData)>
-}
-
-impl RenderData {
-    pub fn new() -> Self {
-        return Self {
-            last_id: 0,
-            rendering: HashMap::new()
-        }
-    }
-}
-
-impl Renderer for RenderData {
-    fn push(&mut self, mesh: Mesh, data: FrameData) -> u64 {
+    pub fn push(&mut self, mesh: Mesh, data: FrameData) -> u64 {
         let id = self.last_id;
         self.last_id += 1;
-        self.rendering.insert(id, (mesh, data));
+        self.rendering.insert(id, RenderingData::new(
+            self.device.as_ref().unwrap().lock().unwrap().deref(), mesh, data));
         return id;
     }
 
-    fn update(&mut self, id: u64, data: FrameData) {
-        let mesh = self.rendering.remove(&id).unwrap().0;
-        self.rendering.insert(id, (mesh, data));
+    pub fn update(&mut self, id: u64, data: FrameData) {
+        self.rendering.get_mut(&id).unwrap().update(data);
     }
 
-    fn clear(&mut self, id: u64) {
+    pub fn clear(&mut self, id: u64) {
         self.rendering.remove(&id);
     }
+}
 
-    fn get_data(&self) -> &HashMap<u64, (Mesh, FrameData)> {
-        return &self.rendering;
+lazy_static! {
+    pub static ref RENDERER_REF: Box<dyn Renderer + Sync> = Box::new(RendererRef::new());
+}
+
+pub struct RendererRef {}
+
+impl RendererRef {
+    fn new() -> Self {
+        return Self {};
+    }
+}
+
+impl Renderer for RendererRef {
+    fn push(&self, mesh: Mesh, data: FrameData) -> u64 {
+        return RENDERER.lock().unwrap().push(mesh, data);
+    }
+
+    fn update(&self, id: u64, data: FrameData) {
+        RENDERER.lock().unwrap().update(id, data);
+    }
+
+    fn clear(&self, id: u64) {
+        RENDERER.lock().unwrap().clear(id);
     }
 }

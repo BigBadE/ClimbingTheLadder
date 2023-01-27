@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use json::JsonValue;
 use lazy_static::lazy_static;
-use crate::error;
 
 pub enum LanguagePack {
     Translations(Vec<JsonValue>)

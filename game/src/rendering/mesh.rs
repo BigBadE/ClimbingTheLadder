@@ -28,7 +28,8 @@ impl FrameData {
     }
 }
 
-#[derive(Copy, Clone)]
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
     position: [f32; 3],
     tex_coords: [f32; 2]

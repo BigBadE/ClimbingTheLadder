@@ -9,6 +9,7 @@ use winit::window::{Window, WindowBuilder};
 use game::Game;
 use game::resources::content_pack::ContentPack;
 use crate::client::Client;
+use crate::renderer::renderer::{GameRenderer, RENDERER};
 use crate::settings::GameSettings;
 
 pub struct GameWindow {
@@ -103,6 +104,7 @@ impl GameWindow {
 
         let id = window.id();
         let window = GameWindow::new(window).await;
+        RENDERER.lock().unwrap().init(window.device.clone());
         let mut context = Client::new(window, game, content);
         let mut next_frame = context.rendering_time(Instant::now());
         event_loop.run(move |ev, _, control_flow| {

@@ -1,6 +1,6 @@
+use std::path::PathBuf;
 #[cfg(target_arch = "wasm32")]
 use include_dir::Dir;
-use json::JsonValue;
 use game::language::language::LanguagePack;
 use game::resources::content_pack::ContentPack;
 
@@ -14,7 +14,11 @@ impl ContentPack for WebLoader {
         todo!()
     }
 
-    fn types(&self) -> Vec<JsonValue> {
+    fn load_first_shaders(&self) -> Vec<(String, String)> {
+        todo!()
+    }
+
+    fn types(&self) -> Vec<PathBuf> {
         todo!()
     }
 

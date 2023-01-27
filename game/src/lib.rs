@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use std::sync::RwLock;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use anyhow::Error;
 use tokio::task::JoinSet;
 use crate::mods::mod_manager::ModManager;
@@ -21,8 +20,6 @@ pub mod util;
 pub mod world;
 pub mod settings;
 
-pub static NEXT_UPDATE: RwLock<Option<Instant>> = RwLock::new(None);
-
 pub struct Game {
     pub settings: Settings,
     pub task_manager: TaskManager,
@@ -33,10 +30,10 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(mods: JoinSet<Result<GameMod, Error>>, _content: Box<dyn ContentPack + Send>,
-                     task_manager: TaskManager) -> Self {
+    pub fn new(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentPack + Send>,
+               mut task_manager: TaskManager) -> Self {
         let settings = Settings::new();
-        let resource_manager = ResourceManager::new();
+        let mut resource_manager = ResourceManager::new();
 
         return Self {
             settings,
@@ -44,8 +41,12 @@ impl Game {
             resource_manager,
             mods: ModManager::new(mods),
             worlds: Vec::new(),
-            registerer: HashMap::new(),
+            registerer: HashMap::new()
         };
+    }
+
+    pub fn finish_loading(&mut self) {
+
     }
 
     pub async fn create_world(&mut self) {

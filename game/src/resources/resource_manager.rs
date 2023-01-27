@@ -1,18 +1,23 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::{fs, mem};
+use std::future::Future;
+use std::path::PathBuf;
+use std::process::Output;
+use std::sync::{Arc, Mutex};
 use anyhow::Error;
 use json::JsonValue;
 use json::object::Object;
-use crate::error;
+use tokio::task::{JoinError, JoinSet};
+use crate::{error, TaskManager};
 use crate::resources::content_pack::ContentPack;
 
 pub struct ResourceManager {
     //Instantiators
-    instantiators: HashMap<String, fn(&mut ResourceManager, &Object) -> Result<Option<Arc<dyn NamedType + Send + Sync>>, Error>>,
+    instantiators: HashMap<String, fn(&mut ResourceManager, &Object) -> Result<Option<Box<dyn NamedType>>, Error>>,
     //Map of types and named types of that type
     types: HashMap<String, Vec<String>>,
     //Map of types to their name
-    named_types: HashMap<String, Arc<dyn NamedType + Send + Sync>>
+    named_types: HashMap<String, Box<dyn NamedType>>
 }
 
 impl ResourceManager {
@@ -24,7 +29,7 @@ impl ResourceManager {
         }
     }
 
-    pub fn get_type(&self, name: &str) -> Option<&Arc<dyn NamedType + Send + Sync>> {
+    pub fn get_type(&self, name: &str) -> Option<&Box<dyn NamedType>> {
         return self.named_types.get(name);
     }
 
@@ -32,15 +37,38 @@ impl ResourceManager {
         return self.types.get(obj_type);
     }
 
-    pub fn load_all(&mut self, loading: Vec<JsonValue>) {
-        let loading = JsonValue::Array(loading);
-        let mut types = ResourceManager::flatten(&loading);
+    pub async fn load_all(&mut self) {
+        //for json in loading.types() {
+            //let loader = task_manager.get_runtime(true).spawn(Self::load_json(json));
+            //task_manager.get_runtime(false).spawn(Self::load_types(loader));
+        //}
+    }
 
-        let mut removing = Vec::new();
+    async fn load_json(path: PathBuf) -> Result<JsonValue, Error> {
+        return Ok(json::parse(String::from_utf8(fs::read(path)?)?.as_str())?);
+    }
+
+    async fn load_types(loading: impl Future<Output=Result<Result<JsonValue, Error>, JoinError>>) {
+        let found = match loading.await {
+            Ok(value) => match value {
+                Ok(value) => value,
+                Err(error) => {
+                    error!("Error loading JSON: {}", error);
+                    return;
+                }
+            },
+            Err(error) => {
+                error!("Error joining thread: {}", error);
+                return;
+            }
+        };
+        let mut types = Self::get_types(found);
+
+        let mut removing: Vec<usize> = Vec::new();
         while !types.is_empty() {
             let mut i = 0;
             for found in &types {
-                match self.load_value(found) {
+                /*match Self::load_value(found) {
                     Ok(optional) => {
                         if optional.is_some() {
                             removing.push(i);
@@ -48,7 +76,7 @@ impl ResourceManager {
                     }
                     Err(error) => error!("Error loading JSON:\n{}", error)
                 }
-                i += 1;
+                i += 1;*/
             }
             if removing.is_empty() {
                 for value in &types {
@@ -61,23 +89,27 @@ impl ResourceManager {
         }
     }
 
-    pub fn flatten(value: &JsonValue) -> Vec<&Object> {
-        return match value {
+    fn get_types(found: JsonValue) -> Vec<Object> {
+        let mut types = Vec::new();
+        match found {
             JsonValue::Array(values) => {
-                let mut array = vec!();
                 for value in values {
-                    for element in ResourceManager::flatten(value) {
-                        array.push(element);
+                    match value {
+                        JsonValue::Object(object) => types.push(object),
+                        _ => {
+                            error!("Tried to load JSON with unknown top level object: {}", value);
+                            continue
+                        }
                     }
                 }
-                array
             },
-            JsonValue::Object(object) => vec!(object),
+            JsonValue::Object(object) => types.push(object),
             _ => {
-                error!("Unknown parent type in JSON\n{}", value);
-                vec!()
+                error!("Tried to load JSON with unknown top level object: {}", found);
+                return Vec::new();
             }
         }
+        return types;
     }
 
     fn load_value(&mut self, value: &Object) -> Result<Option<()>, Error> {

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use anyhow::Error;
 use tokio::task::JoinSet;
@@ -23,7 +24,7 @@ pub mod settings;
 pub struct Game {
     pub settings: Settings,
     pub task_manager: TaskManager,
-    pub resource_manager: ResourceManager,
+    pub resource_manager: Arc<Mutex<ResourceManager>>,
     worlds: Vec<World>,
     mods: ModManager,
     registerer: HashMap<&'static str, Box<dyn ThingRegister + Send + Sync>>,
@@ -33,7 +34,8 @@ impl Game {
     pub fn new(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentPack + Send>,
                mut task_manager: TaskManager) -> Self {
         let settings = Settings::new();
-        let mut resource_manager = ResourceManager::new();
+        let mut resource_manager = Arc::new(Mutex::new(ResourceManager::new()));
+        ResourceManager::load_all(&resource_manager, &mut task_manager, content);
 
         return Self {
             settings,

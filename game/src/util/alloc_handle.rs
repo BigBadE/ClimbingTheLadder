@@ -1,4 +1,4 @@
-use std::alloc::{alloc, dealloc, Layout};
+use std::alloc::{dealloc, Layout};
 use std::{mem, ptr};
 use std::any::TypeId;
 
@@ -28,7 +28,16 @@ impl AllocHandle {
         };
     }
 
-    pub fn read<T>(self) -> T where T: 'static {
+    pub fn read<T>(&self) -> &T where T: 'static {
+        //Must save and read the same thing, but generics can't be kept in every situation, so the ID is checked
+        assert_eq!(TypeId::of::<T>(), self.type_id);
+
+        unsafe {
+            return &ptr::read(self.pointer as *const u8 as *const T);
+        }
+    }
+
+    pub fn deref<T>(self) -> T where T: 'static {
         //Must save and read the same thing, but generics can't be kept in every situation, so the ID is checked
         assert_eq!(TypeId::of::<T>(), self.type_id);
 

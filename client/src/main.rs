@@ -2,7 +2,7 @@
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
 use std::env;
-use tokio::runtime::{Builder, Handle};
+use tokio::runtime::Builder;
 use game::Game;
 use game::util::task_manager::TaskManager;
 use crate::display::window::GameWindow;

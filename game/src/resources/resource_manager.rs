@@ -32,8 +32,8 @@ impl ResourceManager {
         return self.types.get(obj_type);
     }
 
-    pub fn load_all(&mut self, loading: Vec<JsonValue>) {
-        let loading = JsonValue::Array(loading);
+    pub async fn load_all(&mut self, loading: Box<dyn ContentPack>) {
+        let loading = JsonValue::Array(loading.types());
         let mut types = ResourceManager::flatten(&loading);
 
         let mut removing = Vec::new();

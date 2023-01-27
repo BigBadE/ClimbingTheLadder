@@ -9,6 +9,7 @@ use game::util::alloc_handle::AllocHandle;
 
 pub struct ShaderManager {
     pub shaders: HashMap<String, (RenderPipeline, ShaderModule)>,
+    pub loaded_ui_shaders: bool
 }
 
 lazy_static! {
@@ -18,15 +19,23 @@ lazy_static! {
 impl ShaderManager {
     fn new() -> Self {
         return Self {
-            shaders: HashMap::new()
+            shaders: HashMap::new(),
+            loaded_ui_shaders: false
         };
     }
 
-    pub async fn load(device: Arc<Mutex<Device>>, config: SurfaceConfiguration, content: Box<dyn ContentPack>) -> AllocHandle {
+    pub async fn load(device: Arc<Mutex<Device>>, config: SurfaceConfiguration, load_first: bool, content: Box<dyn ContentPack>) -> AllocHandle {
         let device = device.lock().unwrap();
         let device = device.deref();
         let mut shaders = HashMap::new();
-        for (name, source) in content.shaders() {
+        let found_shaders;
+        if load_first {
+            found_shaders = content.load_first_shaders();
+        } else {
+            found_shaders = content.shaders();
+        }
+
+        for (name, source) in found_shaders {
             let shader = device.create_shader_module(ShaderModuleDescriptor {
                 label: Some(name.as_str()),
                 source: ShaderSource::Wgsl(source.into()),
@@ -36,6 +45,10 @@ impl ShaderManager {
         let mut manager = SHADER_MANAGER.lock().unwrap();
         for (name, shader) in shaders {
             manager.shaders.insert(name, shader);
+        }
+
+        if manager.shaders.contains_key("shader") {
+            manager.loaded_ui_shaders = true;
         }
 
         return AllocHandle::empty();

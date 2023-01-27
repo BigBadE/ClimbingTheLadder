@@ -1,4 +1,8 @@
-# Directories
+# Features
+
+- Job-based multithreading
+- Separate render and update frames
+- Mod support with event and registry system
 
 # Building / Running
 

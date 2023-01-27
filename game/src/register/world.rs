@@ -1,11 +1,11 @@
 use crate::register::ThingRegister;
 use crate::util::alloc_handle::AllocHandle;
 
-pub struct WorldRegister {
+pub struct WorldAttachmentRegister {
     attachments: Vec<fn() -> AllocHandle>
 }
 
-impl ThingRegister for WorldRegister {
+impl ThingRegister for WorldAttachmentRegister {
     fn registered(&self) -> Vec<AllocHandle> {
         let mut list = Vec::new();
         for attachment in &self.attachments {
@@ -19,6 +19,6 @@ impl ThingRegister for WorldRegister {
     }
 }
 
-impl WorldRegister {
+impl WorldAttachmentRegister {
 
 }

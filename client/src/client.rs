@@ -22,8 +22,8 @@ pub struct Client {
 
 impl Client {
     pub fn new(window: GameWindow, mut game: Game, content: Box<dyn ContentPack>) -> Self {
-        game.task_manager.queue(false, ShaderManager::load(window.device.clone(),
-                                                           window.config.clone(), content));
+        game.task_manager.queue(false, ShaderManager::load(
+            window.device.clone(), window.config.clone(), true, content));
 
         let mut temp = Self {
             game,
@@ -32,7 +32,9 @@ impl Client {
             ui_manager: UIManager::new(),
             render_data: Arc::new(Mutex::new(Box::new(RenderData::new()))),
         };
+
         temp.ui_manager.set_handle(&mut temp.render_data);
+        temp.game.finish_loading();
         return temp;
     }
 

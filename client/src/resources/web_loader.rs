@@ -14,6 +14,10 @@ impl ContentPack for WebLoader {
         todo!()
     }
 
+    fn load_first_shaders(&self) -> Vec<(String, String)> {
+        todo!()
+    }
+
     fn types(&self) -> Vec<JsonValue> {
         todo!()
     }

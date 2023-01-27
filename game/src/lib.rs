@@ -21,8 +21,6 @@ pub mod util;
 pub mod world;
 pub mod settings;
 
-pub static NEXT_UPDATE: RwLock<Option<Instant>> = RwLock::new(None);
-
 pub struct Game {
     pub settings: Settings,
     pub task_manager: TaskManager,
@@ -33,19 +31,24 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(mods: JoinSet<Result<GameMod, Error>>, _content: Box<dyn ContentPack + Send>,
+    pub fn new(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentPack + Send>,
                      task_manager: TaskManager) -> Self {
         let settings = Settings::new();
         let resource_manager = ResourceManager::new();
 
+        task_manager.queue(true, ResourceManager::l)
         return Self {
             settings,
             task_manager,
             resource_manager,
             mods: ModManager::new(mods),
             worlds: Vec::new(),
-            registerer: HashMap::new(),
+            registerer: HashMap::new()
         };
+    }
+
+    pub fn finish_loading(&mut self) {
+
     }
 
     pub async fn create_world(&mut self) {

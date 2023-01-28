@@ -18,7 +18,7 @@ pub struct WorldData {
 }
 
 impl World {
-    pub fn new(task_manager: &TaskManager, found_attachments: &Box<dyn ThingRegister + Send + Sync>) -> Self {
+    pub fn new(task_manager: &TaskManager, found_attachments: &Box<dyn ThingRegister>) -> Self {
         let (input_sender, input_receiver): (Sender<WorldInput>, Receiver<WorldInput>) = mpsc::channel();
 
         let temp = Self {
@@ -27,7 +27,7 @@ impl World {
 
         let mut attachments = Vec::new();
         for attachment in found_attachments.registered() {
-            attachments.push(attachment.read())
+            attachments.push(attachment.deref::<Box<dyn WorldAttachment>>())
         }
         task_manager.get_runtime(false).spawn(Self::update_async(
             WorldData::new(input_receiver), attachments));
@@ -46,7 +46,7 @@ impl World {
         self.input_sender.send(WorldInput::SpawnEntity(entity)).unwrap();
     }
 
-    pub async fn update_async(mut world_data: WorldData, mut attachments: Vec<Box<dyn WorldAttachment + Send + Sync>>) {
+    pub async fn update_async(mut world_data: WorldData, mut attachments: Vec<Box<dyn WorldAttachment>>) {
         Self::generate(&mut world_data);
         loop {
             match world_data.input_receiver.recv().unwrap() {

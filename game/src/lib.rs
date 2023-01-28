@@ -27,11 +27,11 @@ pub struct Game {
     pub resource_manager: Arc<Mutex<ResourceManager>>,
     worlds: Vec<World>,
     mods: ModManager,
-    registerer: HashMap<&'static str, Box<dyn ThingRegister + Send + Sync>>,
+    registerer: HashMap<&'static str, Box<dyn ThingRegister>>
 }
 
 impl Game {
-    pub fn new(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentPack + Send>,
+    pub fn new(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentPack>,
                mut task_manager: TaskManager) -> Self {
         let settings = Settings::new();
         let mut resource_manager = Arc::new(Mutex::new(ResourceManager::new()));

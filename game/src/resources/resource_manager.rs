@@ -1,13 +1,13 @@
 use std::collections::HashMap;
-use std::{fs, mem};
+use std::fs;
 use std::any::TypeId;
 use std::future::Future;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use anyhow::Error;
 use json::JsonValue;
 use json::object::Object;
+use tokio::runtime::Handle;
 use tokio::task::JoinError;
 use crate::{ContentPack, error, TaskManager};
 use crate::resources::resource_loader::ResourceLoader;
@@ -38,15 +38,14 @@ impl ResourceManager {
         };
     }
 
-    pub fn get_type<T>(reference: Arc<Mutex<Self>>, name: &str) -> Option<&T> where T: NamedType {
-        let locked = reference.lock().unwrap();
-        return match locked.named_types.get(name) {
-            Some(value) => Some(locked.all_types[*value].read()),
+    pub fn get_type<T>(&self, name: &str) -> Option<&T> where T: NamedType + 'static {
+        return match self.named_types.get(name) {
+            Some(value) => Some(self.all_types[*value].read()),
             None => None
         };
     }
 
-    pub fn get_all_of_type<T>(&self) -> Vec<&T> {
+    pub fn get_all_of_type<T>(&self) -> Vec<&T> where T: 'static {
         let mut output = Vec::new();
         for value in self.types.get(&TypeId::of::<T>()).unwrap() {
             output.push(self.all_types[*value].read());
@@ -60,9 +59,9 @@ impl ResourceManager {
             ResourceLoader::new(reference.clone())));
         for json in loading.types() {
             let loader = task_manager.get_runtime(true).spawn(Self::load_json(json));
-            for task in Self::load_types(loader, resource_loader.clone()) {
-                task_manager.get_runtime(false).spawn(task);
-            }
+            task_manager.get_runtime(false).spawn(
+                Self::load_types(loader, resource_loader.clone(),
+                                 task_manager.get_runtime(false).clone()));
         }
         return resource_loader;
     }
@@ -72,8 +71,7 @@ impl ResourceManager {
     }
 
     async fn load_types(loading: impl Future<Output=Result<Result<JsonValue, Error>, JoinError>>,
-                        loader: Arc<Mutex<ResourceLoader>>) -> 
-    Vec<impl Future<Output=Result<(TypeId, Box<dyn NamedType>), Error>>> {
+                        loader: Arc<Mutex<ResourceLoader>>, runtime: Handle) {
         let found = match loading.await {
             Ok(value) => match value {
                 Ok(value) => value,
@@ -87,13 +85,10 @@ impl ResourceManager {
                 return;
             }
         };
-        
-        let loader = loader.lock().unwrap();
-        let mut output = Vec::new();
+
         for found in Self::get_types(found) {
-            output.push(loader.spawn(found));
+            runtime.spawn(ResourceLoader::spawn(loader.clone(), found));
         }
-        return output;
     }
 
     fn get_types(found: JsonValue) -> Vec<Object> {

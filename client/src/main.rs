@@ -46,6 +46,7 @@ fn main() {
             panic!("Couldn't find resources directory!");
         }
     }
+
     let content = Box::new(DesktopLoader::new(directory));
     let game = Game::new(load_mods(&io_runtime), content.clone(),
               TaskManager::new(cpu_runtime.handle().clone(), io_runtime.handle().clone()));

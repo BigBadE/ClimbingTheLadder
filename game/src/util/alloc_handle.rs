@@ -41,8 +41,10 @@ impl AllocHandle {
         //Must save and read the same thing, but generics can't be kept in every situation, so the ID is checked
         assert_eq!(TypeId::of::<T>(), self.type_id);
 
+        let reference = Box::leak(Box::new(self));
+
         unsafe {
-            return ptr::read(self.pointer as *const u8 as *const T);
+            return ptr::read(reference.pointer as *const u8 as *const T);
         }
     }
 }

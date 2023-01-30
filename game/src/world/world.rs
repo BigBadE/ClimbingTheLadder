@@ -27,7 +27,7 @@ impl World {
 
         let mut attachments = Vec::new();
         for attachment in found_attachments.registered() {
-            attachments.push(attachment.read())
+            attachments.push(attachment.deref_boxed())
         }
         task_manager.get_runtime(false).spawn(Self::update_async(
             WorldData::new(input_receiver), attachments));

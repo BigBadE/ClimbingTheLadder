@@ -45,6 +45,16 @@ impl AllocHandle {
             return ptr::read(self.pointer as *const u8 as *const T);
         }
     }
+
+    pub fn deref_boxed<T>(self) -> Box<T> where T: 'static {
+        //Must save and read the same thing, but generics can't be kept in every situation, so the ID is checked
+        assert_eq!(TypeId::of::<T>(), self.type_id);
+
+        unsafe {
+            return Box::from_raw(self.pointer as *mut u8 as *mut T);
+        }
+    }
+
 }
 
 impl Drop for AllocHandle {

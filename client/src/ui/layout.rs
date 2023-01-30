@@ -1,7 +1,7 @@
-use game::util::types::{Vector2, Rectangle};
+use game::util::types::{Rectangle, Vector2Int};
 
 pub trait LayoutConstraint {
-    fn constriction(&self, parent: &Vector2) -> f32;
+    fn constriction(&self, parent: &u32) -> u32;
 }
 
 pub struct ComponentLayout {
@@ -22,11 +22,11 @@ impl ComponentLayout {
         }
     }
 
-    fn get_position(&self, parent: &Rectangle) -> Vector2 {
-        return Vector2::new(self.x.constriction(&parent.size), self.y.constriction(&parent.size));
+    fn get_position(&self, parent: &Rectangle) -> Vector2Int {
+        return Vector2Int::new(self.x.constriction(&parent.size.x), self.y.constriction(&parent.size.y));
     }
 
-    fn get_size(&self, parent: &Rectangle) -> Vector2 {
-        return Vector2::new(self.width.constriction(&parent.size), self.height.constriction(&parent.size));
+    fn get_size(&self, parent: &Rectangle) -> Vector2Int {
+        return Vector2Int::new(self.width.constriction(&parent.size.x), self.height.constriction(&parent.size.y));
     }
 }

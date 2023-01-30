@@ -17,26 +17,10 @@ impl UIComponent {
         }
     }
 
-    pub fn load(resource_loader: ResourceManager, resource: JsonValue) -> Result<Self, Error> {
-        todo!()
+    pub fn render(&self, size: Rectangle) {
+
     }
 }
-
-/*impl Renderable for UIComponent {
-    fn data(&self) -> Vec<&Mesh> {
-        let mut meshes = Vec::new();
-        for child in &self.children {
-            for mesh in child.data() {
-                meshes.push(mesh);
-            }
-        }
-        for mesh in self.content.render(Rectangle::new(
-            Vector2::new(0f32, 0f32), Vector2::new(0f32, 0f32))) {
-            meshes.push(mesh);
-        }
-        return meshes;
-    }
-}*/
 
 pub trait UIContent {
     fn render(&self, parent: Rectangle) -> Vec<&Mesh>;

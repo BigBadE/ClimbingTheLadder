@@ -2,7 +2,7 @@ use crate::util::alloc_handle::AllocHandle;
 
 pub mod world;
 
-pub trait ThingRegister {
+pub trait ThingRegister: Send + Sync {
     fn registered(&self) -> Vec<AllocHandle>;
 
     //Due to Rust shenanigans, the type here can't be verified at compile time.

@@ -1,6 +1,6 @@
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc, Mutex};
 use std::sync::mpsc::{Receiver, Sender};
-use crate::{TaskManager, ThingRegister};
+use crate::{Renderer, TaskManager, ThingRegister};
 use crate::world::attachments::WorldAttachment;
 use crate::world::channeling::WorldInput;
 use crate::world::entities::entity::Entity;
@@ -18,7 +18,7 @@ pub struct WorldData {
 }
 
 impl World {
-    pub fn new(task_manager: &TaskManager, found_attachments: &Box<dyn ThingRegister + Send + Sync>) -> Self {
+    pub fn new(task_manager: &TaskManager, renderer: Arc<Mutex<dyn Renderer>>, found_attachments: &Box<dyn ThingRegister>) -> Self {
         let (input_sender, input_receiver): (Sender<WorldInput>, Receiver<WorldInput>) = mpsc::channel();
 
         let temp = Self {
@@ -27,15 +27,15 @@ impl World {
 
         let mut attachments = Vec::new();
         for attachment in found_attachments.registered() {
-            attachments.push(attachment.deref_boxed())
+            attachments.push(attachment.deref());
         }
         task_manager.get_runtime(false).spawn(Self::update_async(
             WorldData::new(input_receiver), attachments));
         return temp;
     }
 
-    pub fn generate(_world_data: &mut WorldData) -> Vec<Room> {
-        todo!()
+    pub fn generate(world_data: &mut WorldData) {
+        world_data.rooms.push(Room::new());
     }
 
     pub fn update(&mut self) {
@@ -46,7 +46,7 @@ impl World {
         self.input_sender.send(WorldInput::SpawnEntity(entity)).unwrap();
     }
 
-    pub async fn update_async(mut world_data: WorldData, mut attachments: Vec<Box<dyn WorldAttachment + Send + Sync>>) {
+    pub async fn update_async(mut world_data: WorldData, mut attachments: Vec<Box<dyn WorldAttachment>>) {
         Self::generate(&mut world_data);
         loop {
             match world_data.input_receiver.recv().unwrap() {

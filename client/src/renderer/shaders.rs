@@ -8,7 +8,7 @@ use game::util::alloc_handle::AllocHandle;
 
 pub struct ShaderManager {
     pub shaders: HashMap<String, (RenderPipeline, ShaderModule)>,
-    pub loaded_ui_shaders: bool
+    pub loaded_ui_shaders: bool,
 }
 
 lazy_static! {
@@ -19,7 +19,7 @@ impl ShaderManager {
     fn new() -> Self {
         return Self {
             shaders: HashMap::new(),
-            loaded_ui_shaders: false
+            loaded_ui_shaders: false,
         };
     }
 
@@ -46,9 +46,7 @@ impl ShaderManager {
             manager.shaders.insert(name, shader);
         }
 
-        if manager.shaders.contains_key("shader") {
-            manager.loaded_ui_shaders = true;
-        }
+        manager.loaded_ui_shaders = true;
 
         return AllocHandle::empty();
     }
@@ -107,5 +105,4 @@ impl ShaderManager {
             attributes: &Self::ATTRIBS,
         }
     }
-
 }

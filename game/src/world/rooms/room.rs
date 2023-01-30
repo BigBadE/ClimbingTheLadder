@@ -5,6 +5,12 @@ pub struct Room {
 }
 
 impl Room {
+    pub fn new() -> Self {
+        return Self {
+            blocks: vec!(Block::new())
+        }
+    }
+    
     pub fn update(&mut self) {
         
     }

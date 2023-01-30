@@ -33,7 +33,8 @@ impl AllocHandle {
         assert_eq!(TypeId::of::<T>(), self.type_id);
 
         unsafe {
-            return &ptr::read(self.pointer as *const u8 as *const T);
+            //Even though this is leaked, the reference lifetime is locked to the alloc lifetime which will drop it.
+            return Box::leak(Box::new(ptr::read(self.pointer as *const u8 as *const T)));
         }
     }
 
@@ -41,20 +42,18 @@ impl AllocHandle {
         //Must save and read the same thing, but generics can't be kept in every situation, so the ID is checked
         assert_eq!(TypeId::of::<T>(), self.type_id);
 
-        unsafe {
-            return ptr::read(self.pointer as *const u8 as *const T);
-        }
-    }
-
-    pub fn deref_boxed<T>(self) -> Box<T> where T: 'static {
-        //Must save and read the same thing, but generics can't be kept in every situation, so the ID is checked
-        assert_eq!(TypeId::of::<T>(), self.type_id);
+        let reference = Box::leak(Box::new(self));
 
         unsafe {
-            return Box::from_raw(self.pointer as *mut u8 as *mut T);
+            return ptr::read(reference.pointer as *const u8 as *const T);
         }
     }
+}
 
+#[repr(C)]
+struct FatPointer {
+    pointer: *const u8,
+    size: usize
 }
 
 impl Drop for AllocHandle {

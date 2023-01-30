@@ -7,9 +7,9 @@ use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 use anyhow::Error;
 use json::object::Object;
-use tokio::task::JoinHandle;
 use crate::ResourceManager;
 use crate::resources::resource_manager::NamedType;
+use crate::util::alloc_handle::AllocHandle;
 
 pub struct ResourceLoader {
     total_tasks: u32,
@@ -29,7 +29,21 @@ impl ResourceLoader {
             wakers: HashMap::new()
         }
     }
-    
+
+    pub fn finish(&mut self, id: TypeId, named_type: Box<dyn NamedType>) {
+        let mut manager = self.reference.lock().unwrap();
+
+        let index = manager.all_types.len();
+        manager.named_types.insert(named_type.name().clone(), index);
+        manager.all_types.push(Arc::new(AllocHandle::new(named_type)));
+        match manager.types.get_mut(&id) {
+            Some(found) => found.push(index),
+            None => {
+                manager.types.insert(id, vec!(index));
+            },
+        }
+    }
+
     pub fn spawn(reference: Arc<Mutex<ResourceLoader>>, object: Object) -> impl Future<Output=Result<(TypeId, Box<dyn NamedType>), Error>>{
         return ResourceLoadTask::new(object, reference);
     }
@@ -38,7 +52,7 @@ impl ResourceLoader {
         self.deadlocked = true;
         for wakers in self.wakers.values() {
             for waker in wakers {
-                waker.wake()
+                waker.wake_by_ref()
             }
         }
     }
@@ -70,7 +84,8 @@ impl Future for ResourceLoadTask {
         let obj_type = obj_type.as_str();
 
         let mut loader = self.loader.lock().unwrap();
-        let mut manager = loader.reference.lock().unwrap();
+        let manager = loader.reference.clone();
+        let mut manager = manager.lock().unwrap();
         
         let creator = match manager.instantiators.get(obj_type) {
             Some(instantiator) => match instantiator(manager.deref_mut(), &self.object) {
@@ -112,7 +127,7 @@ impl Future for ResourceLoadTask {
         loader.total_tasks -= 1;
         match loader.wakers.get(&name) {
             Some(wakers) => for waker in wakers {
-                waker.wake()
+                waker.wake_by_ref()
             },
             None => {}
         }         

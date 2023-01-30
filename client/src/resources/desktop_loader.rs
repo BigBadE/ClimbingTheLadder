@@ -74,7 +74,7 @@ impl DesktopLoader {
         let mut output = Vec::new();
         for file in fs::read_dir(directory)? {
             let file = file?;
-            output.push((file.file_name().into_string().ok().unwrap().split('.').nth(0).unwrap().to_string(),
+            output.push((file.file_name().into_string().unwrap().split('.').nth(0).unwrap().to_string(),
                          String::from_utf8(fs::read(file.path())?)?));
         }
         return Ok(output);

@@ -6,9 +6,11 @@ use tokio::task::JoinSet;
 use crate::mods::mod_manager::ModManager;
 use crate::mods::mods::GameMod;
 use crate::register::ThingRegister;
-use crate::resources::content_pack::ContentPack;
+use crate::rendering::renderer::Renderer;
+use crate::resources::content_pack::{ContentPack, load_content};
 use crate::resources::resource_manager::ResourceManager;
 use crate::settings::Settings;
+use crate::util::alloc_handle::AllocHandle;
 use crate::util::task_manager::TaskManager;
 use crate::world::world::World;
 
@@ -27,32 +29,36 @@ pub struct Game {
     pub resource_manager: Arc<Mutex<ResourceManager>>,
     worlds: Vec<World>,
     mods: ModManager,
-    registerer: HashMap<&'static str, Box<dyn ThingRegister + Send + Sync>>,
+    registerer: HashMap<&'static str, Box<dyn ThingRegister>>,
+    renderer: Arc<Mutex<dyn Renderer>>
 }
 
 impl Game {
-    pub fn new(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentPack + Send>,
-               mut task_manager: TaskManager) -> Self {
+    pub fn new(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentPack>,
+               mut task_manager: TaskManager, renderer: Arc<Mutex<dyn Renderer>>) -> Self {
         let settings = Settings::new();
-        let mut resource_manager = Arc::new(Mutex::new(ResourceManager::new()));
-        ResourceManager::load_all(&resource_manager, &mut task_manager, content);
-
+        let resource_manager = Arc::new(Mutex::new(ResourceManager::new()));
+        load_content(&resource_manager, &mut task_manager, content);
+        
         return Self {
             settings,
             task_manager,
             resource_manager,
             mods: ModManager::new(mods),
             worlds: Vec::new(),
-            registerer: HashMap::new()
+            registerer: HashMap::new(),
+            renderer
         };
     }
 
-    pub fn finish_loading(&mut self) {
-
+    pub async fn finish_loading(&mut self) {
+        self.create_world().await;
     }
 
-    pub async fn create_world(&mut self) {
-        self.worlds.push(World::new(&self.task_manager, self.registerer.get("world").unwrap()));
+    pub async fn create_world(&mut self) -> AllocHandle {
+        self.worlds.push(World::new(&self.task_manager, self.renderer,
+                                    self.registerer.get("world").unwrap()));
+        return AllocHandle::empty();
     }
 
     pub fn notify_update(&mut self) -> Duration {

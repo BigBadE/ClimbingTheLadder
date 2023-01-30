@@ -105,7 +105,7 @@ impl GameWindow {
         let id = window.id();
         let window = GameWindow::new(window).await;
         RENDERER.lock().unwrap().init(window.device.clone());
-        let mut context = Client::new(window, game, content);
+        let mut context = Client::new(window, game, content).await;
         let mut next_frame = context.rendering_time(Instant::now());
         event_loop.run(move |ev, _, control_flow| {
             let rendering;

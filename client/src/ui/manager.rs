@@ -1,26 +1,28 @@
-use std::sync::{Arc, Mutex};
 use game::rendering::mesh::{FrameData, Mesh, Vertex};
-use game::rendering::renderable::Renderable;
 use game::rendering::renderer::Renderer;
 use crate::ui::window::UIWindow;
 
 pub struct UIManager {
     pub cursor_pos: (f64, f64),
     pub size: (u32, u32),
-    pub windows: Vec<UIWindow>
+    pub windows: Vec<UIWindow>,
+    pub renderer: &'static Box<dyn Renderer + Sync>,
 }
 
 impl UIManager {
-    pub fn new() -> Self {
+    pub fn new(renderer: &'static Box<dyn Renderer + Sync>) -> Self {
         return Self {
             cursor_pos: (0f64, 0f64),
             size: (0, 0),
-            windows: Vec::new()
+            windows: Vec::new(),
+            renderer
         }
     }
 
-    pub fn update() {
-
+    pub fn update(&mut self) {
+        for window in &mut self.windows {
+            window.update();
+        }
     }
 
     pub fn open(&mut self, window: UIWindow) {
@@ -29,18 +31,5 @@ impl UIManager {
 
     pub fn resize(&mut self, size: (u32, u32)) {
         self.size = size;
-    }
-}
-
-impl Renderable for UIManager {
-    fn set_handle(&mut self, renderer: &'static Box<dyn Renderer + Sync>) {
-        let mut mesh = Mesh::new("shader".to_string());
-        mesh.vertexes.push(Vertex::new([0f32, 0f32, 0f32], [0f32, 0f32]));
-        mesh.vertexes.push(Vertex::new([10f32, 0f32, 0f32], [0f32, 0f32]));
-        mesh.vertexes.push(Vertex::new([10f32, 10f32, 0f32], [0f32, 0f32]));
-        mesh.indices.push(0);
-        mesh.indices.push(1);
-        mesh.indices.push(2);
-        renderer.push(mesh, FrameData::new());
     }
 }

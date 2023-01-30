@@ -5,9 +5,8 @@ use crate::display::window::GameWindow;
 use crate::renderer::renderer::{RENDERER, RENDERER_REF};
 use crate::ui::manager::UIManager;
 use game::{error, Game};
-use game::rendering::renderable::Renderable;
 use game::resources::content_pack::ContentPack;
-use crate::renderer::shaders::ShaderManager;
+use crate::renderer::shaders::{SHADER_MANAGER, ShaderManager};
 
 pub struct Client {
     game: Game,
@@ -17,7 +16,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(window: GameWindow, mut game: Game, content: Box<dyn ContentPack>) -> Self {
+    pub async fn new(window: GameWindow, mut game: Game, content: Box<dyn ContentPack>) -> Self {
         game.task_manager.queue(false, ShaderManager::load(
             window.device.clone(), window.config.clone(), true, content));
 
@@ -25,14 +24,17 @@ impl Client {
             game,
             window,
             next_update: Instant::now(),
-            ui_manager: UIManager::new()
+            ui_manager: UIManager::new(&RENDERER_REF)
         };
-        temp.ui_manager.set_handle(&RENDERER_REF);
-        temp.game.finish_loading();
+        temp.game.finish_loading().await;
         return temp;
     }
 
     pub fn render(&mut self) -> bool {
+        if !SHADER_MANAGER.lock().unwrap().loaded_ui_shaders {
+            return false;
+        }
+
         let result = RENDERER.lock().unwrap().render(&mut self.window);
         return match result {
             Ok(()) => false,

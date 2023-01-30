@@ -9,6 +9,17 @@ pub struct AllocHandle {
 }
 
 impl AllocHandle {
+    pub fn new_boxed<T>(allocing: Box<T>) -> Self where T: ?Sized + 'static {
+        let size = mem::size_of_val(&allocing);
+        let reference = Box::leak(allocing);
+
+        return Self {
+            pointer: reference as *mut T as *mut u8 as u64,
+            type_id: TypeId::of::<T>(),
+            size,
+        };
+    }
+
     pub fn new<T>(allocing: T) -> Self where T: 'static {
         let size = mem::size_of_val(&allocing);
         let reference = Box::leak(Box::new(allocing));
@@ -33,7 +44,8 @@ impl AllocHandle {
         assert_eq!(TypeId::of::<T>(), self.type_id);
 
         unsafe {
-            return &ptr::read(self.pointer as *const u8 as *const T);
+            //Even though this is leaked, the reference lifetime is locked to the alloc lifetime which will drop it.
+            return Box::leak(Box::new(ptr::read(self.pointer as *const u8 as *const T)));
         }
     }
 

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::RwLock;
+use std::sync::{RwLock, Arc};
 use json::JsonValue;
 use lazy_static::lazy_static;
 
@@ -12,7 +12,7 @@ pub struct LanguageManager {
 }
 
 lazy_static! {
-    pub static ref LANGUAGE_MANAGER: RwLock<LanguageManager> = RwLock::new(LanguageManager::new());
+    pub static ref LANGUAGE_MANAGER: Arc<RwLock<LanguageManager>> = Arc::new(RwLock::new(LanguageManager::new()));
 }
 
 impl LanguageManager {
@@ -29,7 +29,7 @@ impl LanguageManager {
         };
     }
 
-    pub fn load(&mut self, packs: Vec<LanguagePack>) {
+    pub fn load_packs(&mut self, packs: Vec<LanguagePack>) {
         for pack in packs {
             match pack {
                 LanguagePack::Translations(translations) => {

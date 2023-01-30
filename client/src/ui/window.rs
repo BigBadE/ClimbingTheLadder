@@ -10,4 +10,8 @@ impl UIWindow {
             content
         }
     }
+
+    pub fn update(&mut self) {
+        //self.content.update();
+    }
 }

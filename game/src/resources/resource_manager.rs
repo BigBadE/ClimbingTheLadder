@@ -8,7 +8,7 @@ use anyhow::Error;
 use json::JsonValue;
 use json::object::Object;
 use tokio::runtime::Handle;
-use tokio::task::JoinError;
+use tokio::task::{JoinError, JoinSet};
 use crate::{ContentPack, error, TaskManager};
 use crate::resources::resource_loader::ResourceLoader;
 use crate::util::alloc_handle::AllocHandle;
@@ -25,7 +25,7 @@ pub struct ResourceManager {
     pub(crate) types: HashMap<TypeId, Vec<usize>>,
     //Map of types to their name
     pub(crate) named_types: HashMap<String, usize>,
-    pub(crate) all_types: Vec<Arc<AllocHandle>>,
+    pub(crate) all_types: Vec<Arc<AllocHandle>>
 }
 
 impl ResourceManager {
@@ -34,7 +34,7 @@ impl ResourceManager {
             instantiators: HashMap::new(),
             types: HashMap::new(),
             named_types: HashMap::new(),
-            all_types: Vec::new(),
+            all_types: Vec::new()
         };
     }
 
@@ -54,12 +54,12 @@ impl ResourceManager {
     }
 
     pub fn load_all(reference: &Arc<Mutex<Self>>, task_manager: &mut TaskManager,
-                    loading: Box<dyn ContentPack>) -> Arc<Mutex<ResourceLoader>> {
+                    loading: &Box<dyn ContentPack>) -> Arc<Mutex<ResourceLoader>> {
         let resource_loader = Arc::new(Mutex::new(
             ResourceLoader::new(reference.clone())));
         for json in loading.types() {
             let loader = task_manager.get_runtime(true).spawn(Self::load_json(json));
-            task_manager.get_runtime(false).spawn(
+            task_manager.queue(false,
                 Self::load_types(loader, resource_loader.clone(),
                                  task_manager.get_runtime(false).clone()));
         }
@@ -71,24 +71,37 @@ impl ResourceManager {
     }
 
     async fn load_types(loading: impl Future<Output=Result<Result<JsonValue, Error>, JoinError>>,
-                        loader: Arc<Mutex<ResourceLoader>>, runtime: Handle) {
+                        loader: Arc<Mutex<ResourceLoader>>, runtime: Handle) -> AllocHandle {
         let found = match loading.await {
             Ok(value) => match value {
                 Ok(value) => value,
                 Err(error) => {
                     error!("Error loading JSON: {}", error);
-                    return;
+                    return AllocHandle::empty();
                 }
             },
             Err(error) => {
                 error!("Error joining thread: {}", error);
-                return;
+                return AllocHandle::empty();
             }
         };
 
+        let mut join_set = JoinSet::new();
         for found in Self::get_types(found) {
-            runtime.spawn(ResourceLoader::spawn(loader.clone(), found));
+            join_set.spawn_on(ResourceLoader::spawn(loader.clone(), found), &runtime);
         }
+
+        while let Some(value) = join_set.join_next().await {
+            match value {
+                Ok(result) => match result {
+                    Ok((id, named_type)) => loader.lock().unwrap().finish(id, named_type),
+                    Err(error) => error!("Error loading JSON resource:\n{}", error)
+                }
+                Err(error) => error!("Error joining resource loading thread:\n{}", error)
+            }
+        }
+
+        return AllocHandle::empty();
     }
 
     fn get_types(found: JsonValue) -> Vec<Object> {

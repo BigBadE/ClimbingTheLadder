@@ -1,11 +1,14 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use tokio::runtime::Handle;
+use tokio::task::JoinHandle;
 use crate::language::language::{LANGUAGE_MANAGER, LanguagePack};
+use crate::rendering::AssetType;
 use crate::resources::resource_manager::ResourceManager;
 use crate::util::alloc_handle::AllocHandle;
 use crate::util::task_manager::TaskManager;
 
-pub trait ContentPack: Send {
+pub trait ContentPack: Send + Sync {
     fn shaders(&self) -> Vec<(String, String)>;
 
     //This is ignored for mods because they're not loaded yet. Only used for UI shaders.
@@ -13,12 +16,18 @@ pub trait ContentPack: Send {
 
     fn types(&self) -> Vec<PathBuf>;
 
+    #[cfg(feature = "renderer")]
+    fn assets(&self, handle: &Handle) -> JoinHandle<Vec<AssetType>>;
+    
     fn language(&self) -> Vec<LanguagePack>;
+
+    fn clone_boxed(&self) -> Box<dyn ContentPack>;
 }
 
 pub fn load_content(resource_manager: &Arc<Mutex<ResourceManager>>,
                           task_manager: &mut TaskManager, content: Box<dyn ContentPack>) {
     ResourceManager::load_all(resource_manager, task_manager, &content);
+
     task_manager.queue(true, get_packs(content));
 }
 

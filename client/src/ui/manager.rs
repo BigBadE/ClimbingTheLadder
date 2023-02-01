@@ -1,4 +1,4 @@
-use game::rendering::mesh::{FrameData, Mesh, Vertex};
+use std::sync::Arc;
 use game::rendering::renderer::Renderer;
 use crate::ui::window::UIWindow;
 
@@ -6,11 +6,11 @@ pub struct UIManager {
     pub cursor_pos: (f64, f64),
     pub size: (u32, u32),
     pub windows: Vec<UIWindow>,
-    pub renderer: &'static Box<dyn Renderer + Sync>,
+    pub renderer: &'static Arc<dyn Renderer>,
 }
 
 impl UIManager {
-    pub fn new(renderer: &'static Box<dyn Renderer + Sync>) -> Self {
+    pub fn new(renderer: &'static Arc<dyn Renderer>) -> Self {
         return Self {
             cursor_pos: (0f64, 0f64),
             size: (0, 0),

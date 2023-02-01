@@ -6,7 +6,8 @@ use tokio::runtime::Builder;
 use game::Game;
 use game::util::task_manager::TaskManager;
 use crate::display::window::GameWindow;
-use crate::mods::mod_loader::load_mods;
+use crate::mods::mod_loader::ModLoader;
+use crate::renderer::renderer::RENDERER_REF;
 use crate::resources::desktop_loader::DesktopLoader;
 
 pub mod debug;
@@ -48,7 +49,8 @@ fn main() {
     }
 
     let content = Box::new(DesktopLoader::new(directory));
-    let game = Game::new(load_mods(&io_runtime), content.clone(),
-              TaskManager::new(cpu_runtime.handle().clone(), io_runtime.handle().clone()));
+    let game = Game::new(Box::new(ModLoader::new()), content.clone(),
+              TaskManager::new(cpu_runtime.handle().clone(), io_runtime.handle().clone()),
+    RENDERER_REF.clone());
     main_runtime.block_on(GameWindow::run(game, content));
 }

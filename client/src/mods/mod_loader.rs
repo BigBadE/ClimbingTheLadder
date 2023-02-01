@@ -3,28 +3,43 @@ use std::fs::DirEntry;
 use anyhow::Error;
 use libloading::{Library, Symbol};
 use log::error;
-use tokio::runtime::Runtime;
-use tokio::task::JoinSet;
+use tokio::runtime::{Handle, Runtime};
+use tokio::task::{JoinHandle, JoinSet};
 use game::mods::mod_trait::ModMain;
+use game::mods::ModProvider;
 use game::mods::mods::{GameMod, ModManifest};
 use crate::DesktopLoader;
 
-pub fn load_mods(runtime: &Runtime) -> JoinSet<Result<GameMod, Error>> {
-    let mod_folder = env::current_dir().ok().unwrap().join("mods");
-    if !mod_folder.exists() {
-        return JoinSet::new();
-    }
+pub struct ModLoader {
 
-    let mut output = JoinSet::new();
-    for mod_folder in fs::read_dir(mod_folder).unwrap() {
-        match mod_folder {
-            Ok(mod_folder) => {
-                output.spawn_on(load_mod(mod_folder), runtime.handle());
-            },
-            Err(error) => error!("Error opening mod folder:\n{}", error)
+}
+
+impl ModProvider for ModLoader {
+    fn get_mods(&self, runtime: &Handle) -> JoinSet<Result<GameMod, Error>> {
+        let mod_folder = env::current_dir().ok().unwrap().join("mods");
+        if !mod_folder.exists() {
+            return JoinSet::new();
+        }
+
+        let mut output = JoinSet::new();
+        for mod_folder in fs::read_dir(mod_folder).unwrap() {
+            match mod_folder {
+                Ok(mod_folder) => {
+                    output.spawn_on(load_mod(mod_folder), &runtime);
+                },
+                Err(error) => error!("Error opening mod folder:\n{}", error)
+            }
+        }
+        return output;
+    }
+}
+
+impl ModLoader {
+    pub fn new() -> Self {
+        return Self {
+
         }
     }
-    return output;
 }
 
 async fn load_mod(mod_folder: DirEntry) -> Result<GameMod, Error> {
@@ -46,6 +61,17 @@ async fn load_mod(mod_folder: DirEntry) -> Result<GameMod, Error> {
             return Err(Error::msg(format!("Failed to load mod {}", manifest.name)).context(error));
         }
     };
+
     let func: Symbol<unsafe extern fn() -> Box<dyn ModMain + Send>> = unsafe { library.get(manifest.main.as_bytes())? };
-    return Ok(GameMod::new(manifest, Box::new(DesktopLoader::new(mod_folder.path())), unsafe { func() }));
+    let found_mod = GameMod::new(manifest, Box::new(DesktopLoader::new(mod_folder.path())), unsafe { func() });
+
+    return Ok(found_mod);
+}
+
+struct LoadingMod {
+
+}
+
+impl LoadingMod {
+
 }

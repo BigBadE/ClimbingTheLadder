@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 macros = { path = "../macros" }
-game = { path = "../game" }
+game = { path = "../game", features = ["renderer"] }
 
 # Modding
 libloading = "0.7.4"
@@ -15,8 +15,7 @@ json = "0.12.4"
 
 # Rendering
 winit = "0.27.5"
-wgpu = "0.14.2"
-bytemuck = { version = "1.12", features = [ "derive" ] }
+wgpu = "0.15.0"
 
 # Utility
 env_logger = "0.10.0"
@@ -28,6 +27,7 @@ lazy_static = "1.4.0"
 # Multithreading
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1.24.1", features = ["rt-multi-thread" ] }
+image = { version = "0.24", default-features = false, features = ["png"] }
 
 # WASM
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -35,7 +35,7 @@ include_dir = "0.7.3"
 tokio = { version = "1.24.1", features = ["rt"] }
 console_error_panic_hook = "0.1.6"
 console_log = "0.2.0"
-wgpu = { version = "0.14", features = ["webgl"]}
+wgpu = { version = "0.15.0", features = ["webgl"]}
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4.30"
 web-sys = { version = "0.3", features = [
@@ -46,3 +46,7 @@ web-sys = { version = "0.3", features = [
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "ClimbingTheLadder"
+path = "src/main.rs"

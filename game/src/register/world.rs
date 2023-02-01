@@ -20,5 +20,11 @@ impl ThingRegister for WorldAttachmentRegister {
 }
 
 impl WorldAttachmentRegister {
+    pub fn get_registerer() -> Box<dyn ThingRegister> {
+        let found = WorldAttachmentRegister {
+            attachments: Vec::new()
+        };
 
+        return Box::new(found);
+    }
 }

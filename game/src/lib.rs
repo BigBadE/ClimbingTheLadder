@@ -1,11 +1,15 @@
+#![feature(stmt_expr_attributes)]
+
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use anyhow::Error;
-use tokio::task::JoinSet;
+use tokio::task::{JoinHandle, JoinSet};
 use crate::mods::mod_manager::ModManager;
+use crate::mods::ModProvider;
 use crate::mods::mods::GameMod;
 use crate::register::ThingRegister;
+use crate::register::world::WorldAttachmentRegister;
 use crate::rendering::renderer::Renderer;
 use crate::resources::content_pack::{ContentPack, load_content};
 use crate::resources::resource_manager::ResourceManager;
@@ -17,6 +21,7 @@ use crate::world::world::World;
 pub mod language;
 pub mod mods;
 pub mod register;
+#[cfg(feature = "renderer")]
 pub mod rendering;
 pub mod resources;
 pub mod util;
@@ -30,23 +35,43 @@ pub struct Game {
     worlds: Vec<World>,
     mods: ModManager,
     registerer: HashMap<&'static str, Box<dyn ThingRegister>>,
-    renderer: Arc<Mutex<dyn Renderer>>
+    #[cfg(feature = "renderer")]
+    renderer: Arc<dyn Renderer>
 }
 
 impl Game {
-    pub fn new(mods: JoinSet<Result<GameMod, Error>>, content: Box<dyn ContentPack>,
-               mut task_manager: TaskManager, renderer: Arc<Mutex<dyn Renderer>>) -> Self {
+    #[cfg(not(feature = "renderer"))]
+    pub fn new(mods: Box<dyn ModProvider>, content: Box<dyn ContentPack>, mut task_manager: TaskManager) -> Self {
         let settings = Settings::new();
         let resource_manager = Arc::new(Mutex::new(ResourceManager::new()));
         load_content(&resource_manager, &mut task_manager, content);
-        
+        let mods = ModManager::new(mods.get_mods(&task_manager.get_runtime(false)));
+
         return Self {
             settings,
             task_manager,
             resource_manager,
-            mods: ModManager::new(mods),
+            mods,
             worlds: Vec::new(),
-            registerer: HashMap::new(),
+            registerer: hashmap!("world" => WorldAttachmentRegister::get_registerer())
+        };
+    }
+
+    #[cfg(feature = "renderer")]
+    pub fn new(mods: Box<dyn ModProvider>, content: Box<dyn ContentPack>,
+               mut task_manager: TaskManager, renderer: Arc<dyn Renderer>) -> Self {
+        let settings = Settings::new();
+        let resource_manager = Arc::new(Mutex::new(ResourceManager::new()));
+        load_content(&resource_manager, &mut task_manager, content);
+        let mods = ModManager::new(mods.get_mods(&task_manager.get_runtime(false)));
+
+        return Self {
+            settings,
+            task_manager,
+            resource_manager,
+            mods,
+            worlds: Vec::new(),
+            registerer: hashmap!("world" => WorldAttachmentRegister::get_registerer()),
             renderer
         };
     }
@@ -56,8 +81,13 @@ impl Game {
     }
 
     pub async fn create_world(&mut self) -> AllocHandle {
-        self.worlds.push(World::new(&self.task_manager, self.renderer,
+        #[cfg(feature = "renderer")]
+        self.worlds.push(World::new(&self.task_manager, self.renderer.clone(),
                                     self.registerer.get("world").unwrap()));
+
+        #[cfg(not(feature = "renderer"))]
+        self.worlds.push(World::new(&self.task_manager, self.registerer.get("world").unwrap()));
+
         return AllocHandle::empty();
     }
 

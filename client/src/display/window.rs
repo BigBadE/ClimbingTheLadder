@@ -1,7 +1,7 @@
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use instant::Instant;
-use wgpu::{Device, Queue, Surface, SurfaceConfiguration};
+use wgpu::{Backends, Device, InstanceDescriptor, Queue, Surface, SurfaceConfiguration};
 use winit::dpi::PhysicalSize;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -9,7 +9,7 @@ use winit::window::{Window, WindowBuilder};
 use game::Game;
 use game::resources::content_pack::ContentPack;
 use crate::client::Client;
-use crate::renderer::renderer::{GameRenderer, RENDERER};
+use crate::renderer::renderer::RENDERER;
 use crate::settings::GameSettings;
 
 pub struct GameWindow {
@@ -17,7 +17,7 @@ pub struct GameWindow {
     pub modifiers: u32,
     pub surface: Surface,
     pub device: Arc<Mutex<Device>>,
-    pub queue: Queue,
+    pub queue: Arc<Queue>,
     pub inner: Window,
     pub size: (u32, u32),
     pub config: SurfaceConfiguration
@@ -31,8 +31,11 @@ impl GameWindow {
 
         // The instance is a handle to our GPU
         // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU
-        let instance = wgpu::Instance::new(wgpu::Backends::all());
-        let surface = unsafe { instance.create_surface(&window) };
+        let instance = wgpu::Instance::new(InstanceDescriptor {
+            backends: Backends::all(),
+            dx12_shader_compiler: Default::default(),
+        });
+        let surface = unsafe { instance.create_surface(&window).unwrap() };
         let adapter = instance.request_adapter(
             &wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
@@ -58,11 +61,12 @@ impl GameWindow {
 
         let config = SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface.get_supported_formats(&adapter)[0],
+            format: surface.get_capabilities(&adapter).formats[0],
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
+            view_formats: surface.get_capabilities(&adapter).formats,
         };
         surface.configure(&device, &config);
 
@@ -71,7 +75,7 @@ impl GameWindow {
             modifiers: 0,
             surface,
             device: Arc::new(Mutex::new(device)),
-            queue,
+            queue: Arc::new(queue),
             inner: window,
             config,
             size: (size.width, size.height)
@@ -104,7 +108,7 @@ impl GameWindow {
 
         let id = window.id();
         let window = GameWindow::new(window).await;
-        RENDERER.lock().unwrap().init(window.device.clone());
+        RENDERER.lock().unwrap().init(window.device.clone(), window.queue.clone());
         let mut context = Client::new(window, game, content).await;
         let mut next_frame = context.rendering_time(Instant::now());
         event_loop.run(move |ev, _, control_flow| {

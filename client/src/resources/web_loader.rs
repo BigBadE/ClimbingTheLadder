@@ -1,7 +1,10 @@
 use std::path::PathBuf;
+use tokio::runtime::Handle;
 #[cfg(target_arch = "wasm32")]
 use include_dir::Dir;
+use tokio::task::JoinHandle;
 use game::language::language::LanguagePack;
+use game::rendering::AssetType;
 use game::resources::content_pack::ContentPack;
 
 #[derive(Clone)]
@@ -22,7 +25,15 @@ impl ContentPack for WebLoader {
         todo!()
     }
 
+    fn assets(&self, handle: &Handle) -> JoinHandle<Vec<AssetType>> {
+        todo!()
+    }
+    
     fn language(&self) -> Vec<LanguagePack> {
+        todo!()
+    }
+
+    fn clone_boxed(&self) -> Box<dyn ContentPack> {
         todo!()
     }
 }

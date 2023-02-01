@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use lazy_static::lazy_static;
-use wgpu::{Color, CommandEncoderDescriptor, Device, LoadOp, Operations, RenderPassColorAttachment, RenderPassDescriptor, SurfaceError, TextureViewDescriptor};
+use wgpu::{Color, CommandEncoderDescriptor, Device, IndexFormat, LoadOp, Operations, Queue, RenderPassColorAttachment, RenderPassDescriptor, SurfaceError, TextureViewDescriptor};
 use game::error;
+use game::rendering::GameTexture;
 use game::rendering::mesh::{FrameData, Mesh};
 use game::rendering::renderer::Renderer;
 use crate::display::window::GameWindow;
@@ -17,6 +18,7 @@ lazy_static! {
 pub struct GameRenderer {
     last_id: u64,
     device: Option<Arc<Mutex<Device>>>,
+    queue: Option<Arc<Queue>>,
     rendering: HashMap<u64, RenderingData>
 }
 
@@ -25,12 +27,14 @@ impl GameRenderer {
         return Self {
             last_id: 0,
             device: None,
-            rendering: HashMap::new(),
+            queue: None,
+            rendering: HashMap::new()
         }
     }
 
-    pub(crate) fn init(&mut self, device: Arc<Mutex<Device>>) {
+    pub(crate) fn init(&mut self, device: Arc<Mutex<Device>>, queue: Arc<Queue>) {
         self.device = Some(device);
+        self.queue = Some(queue);
     }
 
     pub fn render(&self, window: &mut GameWindow) -> Result<(), SurfaceError> {
@@ -63,9 +67,11 @@ impl GameRenderer {
                 match shaders.shaders.get(&data.shader) {
                     Some(shader) => {
                         render_pass.set_pipeline(&shader.0);
+                        render_pass.set_bind_group(0, &data.bind_group, &[]);
                         render_pass.set_vertex_buffer(0, data.vertex_buffer.slice(..));
-                        render_pass.draw(
-                            0..data.vertex_buffer.size() as u32, 0..data.vertex_buffer.size() as u32 / 3);
+                        render_pass.set_index_buffer(data.index_buffer.slice(..), IndexFormat::Uint16);
+                        render_pass.draw_indexed(
+                            0..data.index_buffer.size() as u32 / 2, 0, 0..1);
                     },
                     None => {
                         error!("No loaded shader named {}. Loaded: {:?}", data.shader,
@@ -83,11 +89,11 @@ impl GameRenderer {
         return Ok(());
     }
 
-    pub fn push(&mut self, mesh: Mesh, data: FrameData) -> u64 {
+    pub fn push(&mut self, mesh: Arc<Mesh>, texture: Arc<dyn GameTexture>, data: FrameData) -> u64 {
         let id = self.last_id;
         self.last_id += 1;
         self.rendering.insert(id, RenderingData::new(
-            self.device.as_ref().unwrap().lock().unwrap().deref(), mesh, data));
+            self.device.as_ref().unwrap().lock().unwrap().deref(), self.queue.as_ref().unwrap(), mesh, texture, data));
         return id;
     }
 
@@ -101,7 +107,7 @@ impl GameRenderer {
 }
 
 lazy_static! {
-    pub static ref RENDERER_REF: Box<dyn Renderer + Sync> = Box::new(RendererRef::new());
+    pub static ref RENDERER_REF: Arc<dyn Renderer> = Arc::new(RendererRef::new());
 }
 
 pub struct RendererRef {}
@@ -113,8 +119,8 @@ impl RendererRef {
 }
 
 impl Renderer for RendererRef {
-    fn push(&self, mesh: Mesh, data: FrameData) -> u64 {
-        return RENDERER.lock().unwrap().push(mesh, data);
+    fn push(&self, mesh: Arc<Mesh>, texture: Arc<dyn GameTexture>, data: FrameData) -> u64 {
+        return RENDERER.lock().unwrap().push(mesh, texture, data);
     }
 
     fn update(&self, id: u64, data: FrameData) {

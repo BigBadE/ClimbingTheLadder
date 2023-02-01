@@ -6,3 +6,6 @@ members = [
     "macros"
 ]
 resolver = "2"
+
+[profile.dev]
+codegen-units = 128

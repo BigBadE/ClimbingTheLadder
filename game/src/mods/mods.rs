@@ -4,8 +4,10 @@ use std::string::String;
 use anyhow::Error;
 use json::JsonValue;
 use macros::JsonResource;
+use crate::error;
 use crate::mods::mod_trait::ModMain;
 use crate::resources::content_pack::ContentPack;
+use crate::util::json_util::stringify;
 
 //A loaded mod
 pub struct GameMod {
@@ -29,7 +31,11 @@ pub struct ModManifest {
     pub name: String,
     pub main: String,
     #[ignore_field]
-    pub platforms: HashMap<String, String>
+    pub platforms: HashMap<String, String>,
+    #[ignore_field]
+    pub hard_dependencies: Vec<String>,
+    #[ignore_field]
+    pub soft_dependencies: Vec<String>
 }
 
 impl ModManifest {
@@ -37,7 +43,9 @@ impl ModManifest {
         return Self {
             name: String::new(),
             main: String::new(),
-            platforms: HashMap::new()
+            platforms: HashMap::new(),
+            hard_dependencies: Vec::new(),
+            soft_dependencies: Vec::new()
         }
     }
 
@@ -49,6 +57,10 @@ impl ModManifest {
                 _ => return Err(Error::msg("Unknown type for platform!"))
             }).unwrap();
         }
+
+        returning.hard_dependencies = stringify(&manifest["hard_dependencies"]);
+        returning.soft_dependencies = stringify(&manifest["soft_dependencies"]);
+
         return Ok(returning)
     }
 }

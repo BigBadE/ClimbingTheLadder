@@ -6,7 +6,7 @@ use crate::renderer::renderer::{RENDERER, RENDERER_REF};
 use crate::ui::manager::UIManager;
 use game::{error, Game};
 use game::resources::content_pack::ContentPack;
-use crate::renderer::assets::AssetManager;
+use crate::renderer::assets::{ASSET_MANAGER, AssetManager};
 use crate::renderer::shaders::{SHADER_MANAGER, ShaderManager};
 
 pub struct Client {
@@ -17,23 +17,22 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn new(window: GameWindow, mut game: Game, content: Box<dyn ContentPack>) -> Self {
+    pub fn new(window: GameWindow, mut game: Game, content: Box<dyn ContentPack>) -> Self {
         game.task_manager.queue(false, ShaderManager::load(
             window.device.clone(), window.config.clone(), true, content.clone_boxed()));
         game.task_manager.queue(false, ShaderManager::load(
             window.device.clone(), window.config.clone(), false, content.clone_boxed()));
-        game.task_manager.queue(false, AssetManager::load(
-            game.task_manager.get_runtime(true).clone(), content.clone_boxed()));
+        //You may be wondering why go through this load function.
+        //It's because if you don't, lazy_static will re-initialize the static for no reason.
+        game.resource_manager.lock().unwrap().asset_manager.load(
+            &mut game.task_manager, content.clone_boxed());
 
-        let mut temp = Self {
+        return Self {
             game,
             window,
             next_update: Instant::now(),
             ui_manager: UIManager::new(&RENDERER_REF)
         };
-
-        temp.game.finish_loading().await;
-        return temp;
     }
 
     pub fn render(&mut self) -> bool {
@@ -63,8 +62,8 @@ impl Client {
         self.window.inner.request_redraw();
     }
 
-    pub fn update(&mut self) {
-        self.next_update += self.game.notify_update();
+    pub async fn update(&mut self) {
+        self.next_update += self.game.notify_update().await;
     }
 
     pub(crate) fn key_modifier_change(&mut self, modifiers: &ModifiersState) {

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use lazy_static::lazy_static;
-use wgpu::{BindGroupLayoutEntry, ShaderStages, BindingType, TextureViewDimension, TextureSampleType, SamplerBindingType, BlendState, ColorTargetState, ColorWrites, Device, Face, FragmentState, FrontFace, MultisampleState, PipelineLayoutDescriptor, PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor, ShaderModule, ShaderModuleDescriptor, ShaderSource, SurfaceConfiguration, VertexState};
+use wgpu::{BindGroupLayoutEntry, ShaderStages, BindingType, TextureViewDimension, TextureSampleType, SamplerBindingType, BlendState, ColorTargetState, ColorWrites, Device, Face, FragmentState, FrontFace, MultisampleState, PipelineLayoutDescriptor, PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor, ShaderModule, ShaderModuleDescriptor, ShaderSource, SurfaceConfiguration, VertexState, VertexAttribute, vertex_attr_array};
 use game::rendering::mesh::Vertex;
 use game::resources::content_pack::ContentPack;
 use game::util::alloc_handle::AllocHandle;
@@ -75,12 +75,12 @@ impl ShaderManager {
     pub fn get_pipeline(device: &Device, config: &SurfaceConfiguration, shader: &ShaderModule) -> RenderPipeline {
         let bind_group = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: BIND_LAYOUT.deref(),
-            label: Some("Texture Bind Group Layout"),
+            label: Some("Texture Bind Group Layout")
         });
         let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
             bind_group_layouts: &[&bind_group],
-            push_constant_ranges: &[],
+            push_constant_ranges: &[]
         });
         return device.create_render_pipeline(&RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
@@ -96,8 +96,8 @@ impl ShaderManager {
                 targets: &[Some(ColorTargetState {
                     format: config.format,
                     blend: Some(BlendState::REPLACE),
-                    write_mask: ColorWrites::ALL,
-                })],
+                    write_mask: ColorWrites::ALL
+                })]
             }),
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,
@@ -106,20 +106,19 @@ impl ShaderManager {
                 cull_mode: Some(Face::Back),
                 polygon_mode: PolygonMode::Fill,
                 unclipped_depth: false,
-                conservative: false,
+                conservative: false
             },
             depth_stencil: None,
             multisample: MultisampleState {
                 count: 1,
                 mask: !0,
-                alpha_to_coverage_enabled: false,
+                alpha_to_coverage_enabled: false
             },
-            multiview: None,
+            multiview: None
         });
     }
 
-    const ATTRIBS: [wgpu::VertexAttribute; 2] =
-        wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2];
+    const ATTRIBS: [VertexAttribute; 2] = vertex_attr_array![0 => Float32x3, 1 => Float32x2];
 
     fn description<'a>() -> wgpu::VertexBufferLayout<'a> {
         use std::mem;

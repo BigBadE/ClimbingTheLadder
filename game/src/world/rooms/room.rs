@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use crate::rendering::renderer::Renderer;
+use crate::resources::resource_manager::ResourceManager;
 use crate::world::blocks::block::Block;
 
 pub struct Room {
@@ -7,9 +8,9 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn new(#[cfg(feature = "renderer")] arc: Arc<dyn Renderer>) -> Self {
+    pub fn new(resources: &ResourceManager, #[cfg(feature = "renderer")] arc: Arc<dyn Renderer>) -> Self {
         #[cfg(feature = "renderer")]
-            let blocks = vec!(Block::new(arc));
+            let blocks = vec!(Block::new(resources, arc));
         #[cfg(not(feature = "renderer"))]
             let blocks = vec!(Block::new());
 

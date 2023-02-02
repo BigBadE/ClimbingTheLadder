@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::fs;
+use std::{fs, path};
+use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -28,7 +29,7 @@ impl ContentPack for DesktopLoader {
                 error!("Error loading shaders: {}", error);
                 return Vec::new();
             }
-        }
+        };
     }
 
     fn load_first_shaders(&self) -> Vec<(String, String)> {
@@ -38,7 +39,7 @@ impl ContentPack for DesktopLoader {
                 error!("Error loading load-first shaders: {}", error);
                 return Vec::new();
             }
-        }
+        };
     }
 
     fn types(&self) -> Vec<PathBuf> {
@@ -55,7 +56,7 @@ impl ContentPack for DesktopLoader {
                 error!("Error loading JSON types: {}", error);
                 return Vec::new();
             }
-        }
+        };
     }
 
     fn assets(&self, handle: &Handle) -> JoinHandle<Vec<AssetType>> {
@@ -64,28 +65,23 @@ impl ContentPack for DesktopLoader {
             Ok(value) => {
                 let mut loaded = HashMap::new();
                 for (file, model) in value {
-                    let name = model["$name"].dump();
-                    if name.is_empty() {
-                        error!("No name for model {}", file)
-                    } else {
-                        loaded.insert(name, Arc::new(Mesh::load(model)));
-                    }
+                    loaded.insert(file, Arc::new(Mesh::load(model)));
                 }
                 output.push(AssetType::Model(loaded));
-            },
+            }
             Err(error) => error!("Error loading models: {}", error)
         }
 
         let mut temp = Vec::new();
         match DesktopLoader::find_files(self.root.join("assets/textures"), &mut temp) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(error) => {
                 error!("Error finding textures: {}", error)
             }
         }
         let mut loading = JoinSet::new();
         for texture in temp {
-            loading.spawn_on(Self::load_image(texture), handle);
+            loading.spawn_on(Self::load_image(self.root.join("assets/textures"), texture), handle);
         }
         return handle.spawn(Self::join_images(loading, output));
     }
@@ -99,7 +95,7 @@ impl ContentPack for DesktopLoader {
                     values.push(value.1)
                 }
                 output.push(LanguagePack::Translations(values))
-            },
+            }
             Err(error) => error!("Error loading translations: {}", error)
         }
         return output;
@@ -112,7 +108,13 @@ impl ContentPack for DesktopLoader {
 
 pub struct TextureWrapper {
     texture: RgbImage,
-    name: String
+    name: String,
+}
+
+impl Display for TextureWrapper {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Texture {}", self.name)
+    }
 }
 
 impl GameTexture for TextureWrapper {
@@ -143,7 +145,7 @@ impl DesktopLoader {
                 Ok(value) => match value {
                     Ok((name, value)) => {
                         temp.insert(name, value);
-                    },
+                    }
                     Err(error) => error!("Error loading file:\n{}", error)
                 },
                 Err(error) => error!("Internal error loading file:\n{}", error)
@@ -153,13 +155,13 @@ impl DesktopLoader {
         return input;
     }
 
-    async fn load_image(texture: PathBuf) -> Result<(String, Arc<dyn GameTexture>), Error> {
+    async fn load_image(base: PathBuf, texture: PathBuf) -> Result<(String, Arc<dyn GameTexture>), Error> {
         let loaded = image::load(BufReader::new(File::open(texture.clone())?),
-                                  ImageFormat::Png).unwrap().to_rgb8();
-        let name = texture.file_name().unwrap().to_str().unwrap().to_string();
+                                 ImageFormat::Png).unwrap().to_rgb8();
+        let name = Self::get_relative_path(base, texture);
         return Ok((name.clone(), Arc::new(TextureWrapper {
             texture: loaded,
-            name
+            name,
         })));
     }
 
@@ -169,16 +171,22 @@ impl DesktopLoader {
         }
 
         let mut output = Vec::new();
-        for file in fs::read_dir(directory)? {
+        for file in fs::read_dir(directory.clone())? {
             let file = file?;
-            let name = file.file_name().into_string().unwrap();
+            let name = Self::get_relative_path(directory.clone(), file.path());
             if ignore.contains(&name.as_str()) {
-                continue
+                continue;
             }
-            output.push((name.split('.').nth(0).unwrap().to_string(),
-                         String::from_utf8(fs::read(file.path())?)?));
+            output.push((name, String::from_utf8(fs::read(file.path())?)?));
         }
         return Ok(output);
+    }
+
+    fn get_relative_path(base: PathBuf, path: PathBuf) -> String {
+        let mut name = path.to_str().unwrap().replace(base.to_str().unwrap(), "")
+            .replace(path::MAIN_SEPARATOR, "/").split('.').nth(0).unwrap().to_string();
+        name.remove(0);
+        return name;
     }
 
     fn find_files(directory: PathBuf, output: &mut Vec<PathBuf>) -> Result<(), Error> {
@@ -200,10 +208,10 @@ impl DesktopLoader {
 
         let mut output = Vec::new();
         let mut temp = Vec::new();
-        DesktopLoader::find_files(directory, &mut temp)?;
+        DesktopLoader::find_files(directory.clone(), &mut temp)?;
         for file in temp {
-            output.push((String::from(file.file_name().unwrap().to_str().unwrap()),
-                        json::parse(String::from_utf8(fs::read(file)?)?.as_str())?));
+            output.push((Self::get_relative_path(directory.clone(), file.clone()),
+                         json::parse(String::from_utf8(fs::read(file)?)?.as_str())?));
         }
         return Ok(output);
     }

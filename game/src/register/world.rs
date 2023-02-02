@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::register::ThingRegister;
 use crate::util::alloc_handle::AllocHandle;
 
@@ -20,11 +21,11 @@ impl ThingRegister for WorldAttachmentRegister {
 }
 
 impl WorldAttachmentRegister {
-    pub fn get_registerer() -> Box<dyn ThingRegister> {
+    pub fn get_registerer() -> Arc<dyn ThingRegister> {
         let found = WorldAttachmentRegister {
             attachments: Vec::new()
         };
 
-        return Box::new(found);
+        return Arc::new(found);
     }
 }

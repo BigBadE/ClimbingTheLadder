@@ -1,6 +1,10 @@
-use std::sync::{Arc, mpsc};
+use std::ops::Deref;
+use std::sync::{Arc, mpsc, Mutex};
 use std::sync::mpsc::{Receiver, Sender};
+use anyhow::Error;
+use tokio::runtime::Handle;
 use crate::{Renderer, TaskManager, ThingRegister};
+use crate::resources::resource_manager::ResourceManager;
 use crate::world::attachments::WorldAttachment;
 use crate::world::channeling::WorldInput;
 use crate::world::entities::entity::Entity;
@@ -9,19 +13,19 @@ use crate::world::rooms::room::Room;
 pub struct World {
     //Errors on senders can safely be unwrapped because if the receiver is dropped
     //we're already extremely fucked
-    input_sender: Sender<WorldInput>
+    input_sender: Sender<WorldInput>,
 }
 
 pub struct WorldData {
     rooms: Vec<Room>,
     input_receiver: Receiver<WorldInput>,
     #[cfg(feature = "renderer")]
-    renderer: Arc<dyn Renderer>
+    renderer: Arc<dyn Renderer>,
 }
 
 impl World {
-    pub fn new(task_manager: &TaskManager, #[cfg(feature = "renderer")] renderer: Arc<dyn Renderer>,
-               found_attachments: &Box<dyn ThingRegister>) -> Self {
+    pub fn new(runtime: &Handle, #[cfg(feature = "renderer")] renderer: Arc<dyn Renderer>,
+               resources: Arc<Mutex<ResourceManager>>, found_attachments: Arc<dyn ThingRegister>) -> Self {
         let (input_sender, input_receiver): (Sender<WorldInput>, Receiver<WorldInput>) = mpsc::channel();
 
         let temp = Self {
@@ -34,31 +38,33 @@ impl World {
         }
 
         #[cfg(feature = "renderer")]
-        task_manager.get_runtime(false).spawn(Self::update_async(
-            WorldData::new(input_receiver, renderer), attachments));
+        runtime.spawn(Self::update_async(
+            WorldData::new(input_receiver, renderer), attachments, resources));
         #[cfg(not(feature = "renderer"))]
-        task_manager.get_runtime(false).spawn(Self::update_async(
-            WorldData::new(input_receiver), attachments));
+        runtime.spawn(Self::update_async(WorldData::new(input_receiver), attachments));
         return temp;
     }
 
-    pub fn generate(world_data: &mut WorldData) {
+    pub fn generate(world_data: &mut WorldData, resources: Arc<Mutex<ResourceManager>>) {
         #[cfg(not(feature = "renderer"))]
-        world_data.rooms.push(Room::new());
+        world_data.rooms.push(Room::new(resources.lock().unwrap().deref()));
         #[cfg(feature = "renderer")]
-        world_data.rooms.push(Room::new(world_data.renderer.clone()));
+        world_data.rooms.push(Room::new(resources.lock().unwrap().deref(), world_data.renderer.clone()));
     }
 
-    pub fn update(&mut self) {
-        self.input_sender.send(WorldInput::Update).unwrap();
+    pub fn update(&mut self) -> Result<(), Error> {
+        self.input_sender.send(WorldInput::Update)?;
+        return Ok(());
     }
 
-    pub fn spawn(&mut self, entity: Entity) {
-        self.input_sender.send(WorldInput::SpawnEntity(entity)).unwrap();
+    pub fn spawn(&mut self, entity: Entity) -> Result<(), Error> {
+        self.input_sender.send(WorldInput::SpawnEntity(entity))?;
+        return Ok(());
     }
 
-    pub async fn update_async(mut world_data: WorldData, mut attachments: Vec<Box<dyn WorldAttachment>>) {
-        Self::generate(&mut world_data);
+    pub async fn update_async(mut world_data: WorldData, mut attachments: Vec<Box<dyn WorldAttachment>>,
+                              resources: Arc<Mutex<ResourceManager>>) {
+        Self::generate(&mut world_data, resources);
         loop {
             match world_data.input_receiver.recv() {
                 Ok(output) => match output {
@@ -87,7 +93,7 @@ impl WorldData {
             rooms: Vec::new(),
             input_receiver,
             #[cfg(feature = "renderer")]
-            renderer
+            renderer,
         };
     }
 }

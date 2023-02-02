@@ -10,6 +10,7 @@ use json::object::Object;
 use tokio::runtime::Handle;
 use tokio::task::{JoinError, JoinSet};
 use crate::{ContentPack, error, TaskManager};
+use crate::rendering::assets::AssetReference;
 use crate::resources::resource_loader::ResourceLoader;
 use crate::util::alloc_handle::AllocHandle;
 
@@ -25,16 +26,21 @@ pub struct ResourceManager {
     pub(crate) types: HashMap<TypeId, Vec<usize>>,
     //Map of types to their name
     pub(crate) named_types: HashMap<String, usize>,
-    pub(crate) all_types: Vec<Arc<AllocHandle>>
+    pub(crate) all_types: Vec<Arc<AllocHandle>>,
+    #[cfg(feature = "renderer")]
+    pub asset_manager: Box<dyn AssetReference>
 }
 
 impl ResourceManager {
-    pub fn new() -> Self {
+    pub fn new(
+        #[cfg(feature = "renderer")]asset_manager: Box<dyn AssetReference>) -> Self {
         return ResourceManager {
             instantiators: HashMap::new(),
             types: HashMap::new(),
             named_types: HashMap::new(),
-            all_types: Vec::new()
+            all_types: Vec::new(),
+            #[cfg(feature = "renderer")]
+            asset_manager
         };
     }
 

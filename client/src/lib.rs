@@ -1,4 +1,3 @@
-
 #[cfg(target_arch = "wasm32")]
 use include_dir::{Dir, include_dir};
 
@@ -44,6 +43,11 @@ pub async fn run() {
     console_error_panic_hook::set_once();
     console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
 
+    let main_runtime = Builder::new_current_thread()
+        .thread_name("ctl-main")
+        .thread_stack_size(3 * 1024 * 1024)
+        .build().unwrap();
+
     let cpu_runtime = Builder::new_current_thread()
         .thread_name("ctl-cpu-worker")
         .thread_stack_size(3 * 1024 * 1024)
@@ -54,7 +58,8 @@ pub async fn run() {
         .thread_stack_size(3 * 1024 * 1024)
         .build().unwrap();
 
+    let content = Box::new(WebLoader::new());
     let game = Game::new(JoinSet::new(), Box::new(WebLoader::new(RESOURCES)),
               TaskManager::new(cpu_runtime, io_runtime));
-    GameWindow::run(game).await;
+    GameWindow::run(game, content, main_runtime);
 }

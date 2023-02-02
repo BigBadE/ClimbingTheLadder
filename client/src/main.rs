@@ -3,6 +3,7 @@
 
 use std::env;
 use tokio::runtime::Builder;
+use ::client::renderer::assets::AssetReferer;
 use game::Game;
 use game::util::task_manager::TaskManager;
 use crate::display::window::GameWindow;
@@ -51,6 +52,6 @@ fn main() {
     let content = Box::new(DesktopLoader::new(directory));
     let game = Game::new(Box::new(ModLoader::new()), content.clone(),
               TaskManager::new(cpu_runtime.handle().clone(), io_runtime.handle().clone()),
-    RENDERER_REF.clone());
-    main_runtime.block_on(GameWindow::run(game, content));
+    Box::new(AssetReferer::new()), RENDERER_REF.clone());
+    GameWindow::run(game, content, main_runtime);
 }

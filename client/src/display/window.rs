@@ -1,6 +1,7 @@
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use instant::Instant;
+use tokio::runtime::Runtime;
 use wgpu::{Backends, Device, InstanceDescriptor, Queue, Surface, SurfaceConfiguration};
 use winit::dpi::PhysicalSize;
 use winit::event::{Event, WindowEvent};
@@ -82,7 +83,7 @@ impl GameWindow {
         };
     }
 
-    pub async fn run(game: Game, content: Box<dyn ContentPack>) {
+    pub fn run(game: Game, content: Box<dyn ContentPack>, runtime: Runtime) {
         let event_loop = EventLoop::new();
 
         let window = WindowBuilder::new().build(&event_loop).unwrap();
@@ -107,14 +108,14 @@ impl GameWindow {
         }
 
         let id = window.id();
-        let window = GameWindow::new(window).await;
+        let window = runtime.block_on(GameWindow::new(window));
         RENDERER.lock().unwrap().init(window.device.clone(), window.queue.clone());
-        let mut context = Client::new(window, game, content).await;
+        let mut context = Client::new(window, game, content);
         let mut next_frame = context.rendering_time(Instant::now());
         event_loop.run(move |ev, _, control_flow| {
             let rendering;
             //Figure out if we're updating the game or rendering the game
-            if next_frame > context.update_time() {
+            if next_frame < context.update_time() {
                 rendering = true;
                 next_frame = context.rendering_time(next_frame);
                 *control_flow = ControlFlow::WaitUntil(next_frame);
@@ -160,7 +161,7 @@ impl GameWindow {
                     if rendering {
                         context.request_redraw();
                     } else {
-                        context.update();
+                        runtime.block_on(context.update());
                     }
                 }
                 _ => (),

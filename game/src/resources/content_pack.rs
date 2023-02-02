@@ -22,6 +22,8 @@ pub trait ContentPack: Send + Sync {
     fn language(&self) -> Vec<LanguagePack>;
 
     fn clone_boxed(&self) -> Box<dyn ContentPack>;
+
+    fn get_relative(&self, path: PathBuf) -> String;
 }
 
 pub fn load_content(resource_manager: &Arc<Mutex<ResourceManager>>,

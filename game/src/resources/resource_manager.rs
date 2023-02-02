@@ -64,9 +64,9 @@ impl ResourceManager {
         let resource_loader = Arc::new(Mutex::new(
             ResourceLoader::new(reference.clone())));
         for json in loading.types() {
-            let loader = task_manager.get_runtime(true).spawn(Self::load_json(json));
+            let loader = task_manager.get_runtime(true).spawn(Self::load_json(json.clone()));
             task_manager.queue(false,
-                Self::load_types(loader, resource_loader.clone(),
+                Self::load_types(loader, loading.get_relative(json), resource_loader.clone(),
                                  task_manager.get_runtime(false).clone()));
         }
         return resource_loader;
@@ -77,12 +77,12 @@ impl ResourceManager {
     }
 
     async fn load_types(loading: impl Future<Output=Result<Result<JsonValue, Error>, JoinError>>,
-                        loader: Arc<Mutex<ResourceLoader>>, runtime: Handle) -> AllocHandle {
+                        name: String, loader: Arc<Mutex<ResourceLoader>>, runtime: Handle) -> AllocHandle {
         let found = match loading.await {
             Ok(value) => match value {
                 Ok(value) => value,
                 Err(error) => {
-                    error!("Error loading JSON: {}", error);
+                    error!("Error loading JSON {}: {}", name, error);
                     return AllocHandle::empty();
                 }
             },
@@ -101,7 +101,7 @@ impl ResourceManager {
             match value {
                 Ok(result) => match result {
                     Ok((id, named_type)) => loader.lock().unwrap().finish(id, named_type),
-                    Err(error) => error!("Error loading JSON resource:\n{}", error)
+                    Err(error) => error!("Error loading JSON resource {}:\n{}", name, error)
                 }
                 Err(error) => error!("Error joining resource loading thread:\n{}", error)
             }

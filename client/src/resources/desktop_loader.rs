@@ -6,7 +6,7 @@ use std::io::BufReader;
 use std::path::PathBuf;
 use std::sync::Arc;
 use anyhow::Error;
-use image::{ImageFormat, RgbImage};
+use image::{ImageFormat, RgbaImage};
 use json::JsonValue;
 use tokio::runtime::Handle;
 use tokio::task::{JoinHandle, JoinSet};
@@ -104,10 +104,17 @@ impl ContentPack for DesktopLoader {
     fn clone_boxed(&self) -> Box<dyn ContentPack> {
         return Box::new(self.clone());
     }
+
+    fn get_relative(&self, path: PathBuf) -> String {
+        let mut name = path.to_str().unwrap().replace(self.root.to_str().unwrap(), "")
+            .replace(path::MAIN_SEPARATOR, "/").split('.').nth(0).unwrap().to_string();
+        name.remove(0);
+        return name;
+    }
 }
 
 pub struct TextureWrapper {
-    texture: RgbImage,
+    texture: RgbaImage,
     name: String,
 }
 
@@ -157,7 +164,7 @@ impl DesktopLoader {
 
     async fn load_image(base: PathBuf, texture: PathBuf) -> Result<(String, Arc<dyn GameTexture>), Error> {
         let loaded = image::load(BufReader::new(File::open(texture.clone())?),
-                                 ImageFormat::Png).unwrap().to_rgb8();
+                                 ImageFormat::Png).unwrap().to_rgba8();
         let name = Self::get_relative_path(base, texture);
         return Ok((name.clone(), Arc::new(TextureWrapper {
             texture: loaded,

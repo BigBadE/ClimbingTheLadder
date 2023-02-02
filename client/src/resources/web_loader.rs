@@ -36,6 +36,10 @@ impl ContentPack for WebLoader {
     fn clone_boxed(&self) -> Box<dyn ContentPack> {
         todo!()
     }
+
+    fn get_relative(&self, path: PathBuf) -> String {
+        todo!()
+    }
 }
 
 impl WebLoader {

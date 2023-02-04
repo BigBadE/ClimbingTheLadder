@@ -3,7 +3,7 @@ use std::sync::{Arc, mpsc, Mutex};
 use std::sync::mpsc::{Receiver, Sender};
 use anyhow::Error;
 use tokio::runtime::Handle;
-use crate::{Renderer, TaskManager, ThingRegister};
+use crate::{Renderer, ThingRegister};
 use crate::resources::resource_manager::ResourceManager;
 use crate::world::attachments::WorldAttachment;
 use crate::world::channeling::WorldInput;

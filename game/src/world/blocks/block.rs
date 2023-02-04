@@ -4,7 +4,7 @@ use crate::resources::resource_manager::ResourceManager;
 use crate::world::cubes::cube::Cube;
 
 pub struct Block {
-    cubes: [Cube; 25]
+    _cubes: [Cube; 25]
 }
 
 impl Block {
@@ -12,7 +12,7 @@ impl Block {
         let mut testing = [Cube::empty(); 25];
         testing[0] = Cube::new(resources, #[cfg(feature = "renderer")] &arc);
         return Self {
-            cubes: testing
+            _cubes: testing
         }
     }
 }

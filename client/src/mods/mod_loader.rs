@@ -3,8 +3,8 @@ use std::fs::DirEntry;
 use anyhow::Error;
 use libloading::{Library, Symbol};
 use log::error;
-use tokio::runtime::{Handle, Runtime};
-use tokio::task::{JoinHandle, JoinSet};
+use tokio::runtime::Handle;
+use tokio::task::JoinSet;
 use game::mods::mod_trait::ModMain;
 use game::mods::ModProvider;
 use game::mods::mods::{GameMod, ModManifest};
@@ -66,12 +66,4 @@ async fn load_mod(mod_folder: DirEntry) -> Result<GameMod, Error> {
     let found_mod = GameMod::new(manifest, Box::new(DesktopLoader::new(mod_folder.path())), unsafe { func() });
 
     return Ok(found_mod);
-}
-
-struct LoadingMod {
-
-}
-
-impl LoadingMod {
-
 }

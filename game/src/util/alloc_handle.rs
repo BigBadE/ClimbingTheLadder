@@ -50,12 +50,6 @@ impl AllocHandle {
     }
 }
 
-#[repr(C)]
-struct FatPointer {
-    pointer: *const u8,
-    size: usize
-}
-
 impl Drop for AllocHandle {
     fn drop(&mut self) {
         if self.size == 0 {

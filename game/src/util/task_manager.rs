@@ -1,6 +1,4 @@
 use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
@@ -15,8 +13,7 @@ pub struct Task {
 pub struct TaskManager {
     cpu_runtime: Handle,
     io_runtime: Handle,
-    tasks: Vec<Task>,
-    empty_waker: Waker,
+    tasks: Vec<Task>
 }
 
 impl TaskManager {
@@ -24,23 +21,9 @@ impl TaskManager {
         return Self {
             cpu_runtime,
             io_runtime,
-            tasks: Vec::new(),
-            empty_waker: unsafe {
-                Waker::from_raw(Self::make_empty(&() as *const ()))
-            },
+            tasks: Vec::new()
         };
     }
-
-    fn make_empty(_: *const ()) -> RawWaker {
-        return RawWaker::new(&() as *const (), &RawWakerVTable::new(Self::make_empty,
-                                                                    Self::empty_fn, Self::empty_fn, Self::empty_fn_drop));
-    }
-
-    fn empty_fn(_: *const ()) {
-        error!("Something tried to use empty waker!");
-    }
-
-    fn empty_fn_drop(_: *const ()) {}
 
     pub fn get_runtime(&self, io: bool) -> &Handle {
         return if io {

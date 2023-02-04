@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::hash;
 use std::sync::{Arc, Mutex};
 use lazy_static::lazy_static;
 use tokio::runtime::Handle;

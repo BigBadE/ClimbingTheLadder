@@ -10,6 +10,7 @@ macros = { path = "../macros" }
 anyhow = "1.0.66"
 lazy_static = "1.4.0"
 bytemuck = { version = "1.12", features = [ "derive" ] }
+cgmath = "0.18.0"
 
 # Resources
 json = "0.12.4"

@@ -1,8 +1,8 @@
 use std::string::ToString;
+use cgmath::Vector3;
 use json::JsonValue;
 use lazy_static::lazy_static;
 use crate::error;
-use crate::util::types::Vector3;
 
 #[derive(Clone)]
 pub struct Mesh {
@@ -15,14 +15,9 @@ lazy_static! {
     pub static ref CUBE: Mesh = Mesh {
         shader: "shader".to_string(),
         vertexes: vec!(
-            /*Left*/Vertex::new([0f32, 0f32, 0f32], [0f32, 0f32]), Vertex::new([1f32, 0f32, 0f32], [0f32, 0f32]), Vertex::new([1f32, 1f32, 0f32], [0f32, 1f32]), Vertex::new([0f32, 1f32, 0f32], [0f32, 0f32]),
-            /*Back*/Vertex::new([1f32, 0f32, 0f32], [0f32, 0f32]), Vertex::new([1f32, 0f32, 1f32], [0f32, 0f32]), Vertex::new([1f32, 1f32, 1f32], [1f32, 1f32]), Vertex::new([0f32, 0f32, 0f32], [0f32, 0f32]),
-            /*Right*/Vertex::new([1f32, 0f32, 1f32], [0f32, 0f32]), Vertex::new([1f32, 1f32, 1f32], [0f32, 0f32]), Vertex::new([0f32, 1f32, 1f32], [0f32, 0f32]), Vertex::new([0f32, 0f32, 1f32], [0f32, 0f32]),
-            /*Front*/Vertex::new([0f32, 0f32, 1f32], [0f32, 0f32]), Vertex::new([0f32, 1f32, 1f32], [0f32, 0f32]), Vertex::new([0f32, 1f32, 0f32], [0f32, 0f32]), Vertex::new([0f32, 0f32, 0f32], [0f32, 0f32]),
-            /*Top*/Vertex::new([0f32, 1f32, 0f32], [0f32, 0f32]), Vertex::new([1f32, 1f32, 0f32], [0f32, 0f32]), Vertex::new([1f32, 1f32, 1f32], [0f32, 0f32]), Vertex::new([0f32, 1f32, 1f32], [0f32, 0f32]),
-            /*Bottom*/Vertex::new([0f32, 0f32, 0f32], [0f32, 0f32]), Vertex::new([1f32, 0f32, 0f32], [0f32, 0f32]), Vertex::new([1f32, 0f32, 1f32], [0f32, 0f32]), Vertex::new([0f32, 0f32, 1f32], [0f32, 0f32])),
-        indices: vec!(/*0*/ 0, 1, 2, 2, 1, 3, /*1*/ 4, 5, 6, 6, 5, 7, /*2*/ 8, 9, 10, 10, 9, 11,
-                    /*3*/ 12, 13, 14, 14, 13, 15, /*4*/ 16, 17, 18, 18, 17, 19, /*5*/ 20, 21, 22, 22, 21, 23)
+            Vertex::new([0.0, 0.0, 0.0], [0.0, 0.0]), Vertex::new([1.0, 0.0, 0.0], [1.0, 0.0]),
+            Vertex::new([0.0, 1.0, 0.0], [0.0, 1.0]), Vertex::new([1.0, 1.0, 0.0], [1.0, 1.0])),
+            indices: vec!(0, 1, 2, 1, 3, 2)
     };
 }
 
@@ -67,13 +62,13 @@ impl Mesh {
 }
 
 pub struct FrameData {
-    pub offset: Vector3,
+    pub offset: Vector3<f32>,
 }
 
 impl FrameData {
     pub fn new() -> Self {
         return Self {
-            offset: Vector3::new(0f32, 0f32, 0f32)
+            offset: Vector3::new(0.0, 0.0, 0.0)
         };
     }
 }
@@ -96,8 +91,8 @@ impl Vertex {
     pub fn load(loading: &JsonValue) -> Self {
         return Self {
             position: Self::load_array(&loading["pos"]),
-            tex_coords: Self::load_array(&loading["tex"])
-        }
+            tex_coords: Self::load_array(&loading["tex"]),
+        };
     }
 
     fn load_array<const L: usize>(from: &JsonValue) -> [f32; L] {
@@ -114,11 +109,11 @@ impl Vertex {
                     }
                 }
                 loading
-            },
+            }
             _ => {
                 error!("Expected array, found:\n{}", from);
                 [0f32; L]
             }
-        }
+        };
     }
 }

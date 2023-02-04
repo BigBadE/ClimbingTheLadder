@@ -6,6 +6,7 @@ use wgpu::{BindGroupLayoutEntry, ShaderStages, BindingType, TextureViewDimension
 use game::rendering::mesh::Vertex;
 use game::resources::content_pack::ContentPack;
 use game::util::alloc_handle::AllocHandle;
+use crate::renderer::renderer::RENDERER;
 
 pub struct ShaderManager {
     pub shaders: HashMap<String, (RenderPipeline, ShaderModule)>,
@@ -79,7 +80,7 @@ impl ShaderManager {
         });
         let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[&bind_group],
+            bind_group_layouts: &[&bind_group, &RENDERER.lock().unwrap().camera.as_ref().unwrap().camera_bind_group_layout],
             push_constant_ranges: &[]
         });
         return device.create_render_pipeline(&RenderPipelineDescriptor {

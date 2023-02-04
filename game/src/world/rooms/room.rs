@@ -1,10 +1,10 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use crate::rendering::renderer::Renderer;
 use crate::resources::resource_manager::ResourceManager;
 use crate::world::blocks::block::Block;
 
 pub struct Room {
-    blocks: Vec<Block>,
+    _blocks: Vec<Block>,
 }
 
 impl Room {
@@ -15,7 +15,7 @@ impl Room {
             let blocks = vec!(Block::new());
 
         return Self {
-            blocks
+            _blocks: blocks
         };
     }
 

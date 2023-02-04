@@ -7,6 +7,7 @@ use game::error;
 use game::rendering::GameTexture;
 use game::rendering::mesh::{FrameData, Mesh};
 use game::rendering::renderer::Renderer;
+use crate::display::camera::Camera;
 use crate::display::window::GameWindow;
 use crate::renderer::rendering_data::RenderingData;
 use crate::renderer::shaders::SHADER_MANAGER;
@@ -19,7 +20,8 @@ pub struct GameRenderer {
     last_id: u64,
     device: Option<Arc<Mutex<Device>>>,
     queue: Option<Arc<Queue>>,
-    rendering: HashMap<u64, RenderingData>
+    rendering: HashMap<u64, RenderingData>,
+    pub camera: Option<Camera>
 }
 
 impl GameRenderer {
@@ -28,11 +30,13 @@ impl GameRenderer {
             last_id: 0,
             device: None,
             queue: None,
-            rendering: HashMap::new()
+            rendering: HashMap::new(),
+            camera: None
         }
     }
 
-    pub(crate) fn init(&mut self, device: Arc<Mutex<Device>>, queue: Arc<Queue>) {
+    pub(crate) fn init(&mut self, device: Arc<Mutex<Device>>, queue: Arc<Queue>, size: (u32, u32)) {
+        self.camera = Some(Camera::new(device.lock().unwrap().deref(), size));
         self.device = Some(device);
         self.queue = Some(queue);
     }
@@ -68,10 +72,11 @@ impl GameRenderer {
                     Some(shader) => {
                         render_pass.set_pipeline(&shader.0);
                         render_pass.set_bind_group(0, &data.bind_group, &[]);
+                        render_pass.set_bind_group(1, &self.camera.as_ref().unwrap().camera_bind_group, &[]);
                         render_pass.set_vertex_buffer(0, data.vertex_buffer.slice(..));
                         render_pass.set_index_buffer(data.index_buffer.slice(..), IndexFormat::Uint16);
                         render_pass.draw_indexed(
-                            0..data.index_buffer.size() as u32 / 2, 0, 0..1);
+                            0..data.index_buffer.size() as u32/2, 0, 0..1);
                     },
                     None => {
                         error!("No loaded shader named {}. Loaded: {:?}", data.shader,

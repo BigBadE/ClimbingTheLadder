@@ -6,7 +6,6 @@ use crate::renderer::renderer::{RENDERER, RENDERER_REF};
 use crate::ui::manager::UIManager;
 use game::{error, Game};
 use game::resources::content_pack::ContentPack;
-use crate::renderer::assets::{ASSET_MANAGER, AssetManager};
 use crate::renderer::shaders::{SHADER_MANAGER, ShaderManager};
 
 pub struct Client {

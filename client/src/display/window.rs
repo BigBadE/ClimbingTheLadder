@@ -79,7 +79,7 @@ impl GameWindow {
             queue: Arc::new(queue),
             inner: window,
             config,
-            size: (size.width, size.height)
+            size: (size.width, size.height),
         };
     }
 
@@ -109,21 +109,10 @@ impl GameWindow {
 
         let id = window.id();
         let window = runtime.block_on(GameWindow::new(window));
-        RENDERER.lock().unwrap().init(window.device.clone(), window.queue.clone());
+        RENDERER.lock().unwrap().init(window.device.clone(), window.queue.clone(), (window.config.width, window.config.height));
         let mut context = Client::new(window, game, content);
         let mut next_frame = context.rendering_time(Instant::now());
         event_loop.run(move |ev, _, control_flow| {
-            let rendering;
-            //Figure out if we're updating the game or rendering the game
-            if next_frame < context.update_time() {
-                rendering = true;
-                next_frame = context.rendering_time(next_frame);
-                *control_flow = ControlFlow::WaitUntil(next_frame);
-            } else {
-                rendering = false;
-                *control_flow = ControlFlow::WaitUntil(context.update_time());
-            }
-
             match ev {
                 Event::WindowEvent {
                     ref event, window_id
@@ -158,10 +147,14 @@ impl GameWindow {
                     }
                 }
                 Event::MainEventsCleared => {
-                    if rendering {
+                    //Figure out if we're updating the game or rendering the game
+                    if next_frame < context.update_time() {
                         context.request_redraw();
+                        next_frame = context.rendering_time(next_frame);
+                        *control_flow = ControlFlow::WaitUntil(next_frame.min(context.update_time()));
                     } else {
                         runtime.block_on(context.update());
+                        *control_flow = ControlFlow::WaitUntil(context.update_time().min(next_frame));
                     }
                 }
                 _ => (),

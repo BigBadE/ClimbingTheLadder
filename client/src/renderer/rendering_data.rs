@@ -2,7 +2,7 @@ use std::mem::size_of;
 use std::ops::Deref;
 use std::sync::Arc;
 use core::num::NonZeroU32;
-use wgpu::{BindGroup, Buffer, BufferUsages, Device, Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, Queue, Texture, TextureAspect, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages, TextureViewDescriptor};
+use wgpu::{AddressMode, BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor, BindingResource, Buffer, BufferUsages, Device, Extent3d, FilterMode, ImageCopyTexture, ImageDataLayout, Origin3d, Queue, SamplerDescriptor, Texture, TextureAspect, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages, TextureViewDescriptor};
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use game::rendering::GameTexture;
 use game::rendering::mesh::{FrameData, Mesh};
@@ -17,7 +17,7 @@ pub struct RenderingData {
 }
 
 impl RenderingData {
-    pub fn new(device: &Device, queue: &Queue, mesh: Arc<Mesh>, texture: Arc<dyn GameTexture>, frame_data: FrameData) -> Self {
+    pub fn new(device: &Device, queue: &Queue, mesh: Arc<Mesh>, texture: Arc<dyn GameTexture>, _frame_data: FrameData) -> Self {
         let size = Extent3d {
             width: texture.dimensions().0,
             height: texture.dimensions().1,
@@ -50,31 +50,31 @@ impl RenderingData {
         );
 
         let texture_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
                 entries: BIND_LAYOUT.deref(),
                 label: Some("Texture Bind Group Layout"),
             });
         let diffuse_texture_view = loaded_texture.create_view(&TextureViewDescriptor::default());
-        let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::FilterMode::Nearest,
+        let diffuse_sampler = device.create_sampler(&SamplerDescriptor {
+            address_mode_u: AddressMode::ClampToEdge,
+            address_mode_v: AddressMode::ClampToEdge,
+            address_mode_w: AddressMode::ClampToEdge,
+            mag_filter: FilterMode::Linear,
+            min_filter: FilterMode::Nearest,
+            mipmap_filter: FilterMode::Nearest,
             ..Default::default()
         });
         let bind_group = device.create_bind_group(
-            &wgpu::BindGroupDescriptor {
+            &BindGroupDescriptor {
                 layout: &texture_bind_group_layout,
                 entries: &[
-                    wgpu::BindGroupEntry {
+                    BindGroupEntry {
                         binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
+                        resource: BindingResource::TextureView(&diffuse_texture_view),
                     },
-                    wgpu::BindGroupEntry {
+                    BindGroupEntry {
                         binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&diffuse_sampler),
+                        resource: BindingResource::Sampler(&diffuse_sampler),
                     }
                 ],
                 label: Some("Diffuse Bind Group"),
@@ -95,16 +95,16 @@ impl RenderingData {
                     usage: BufferUsages::INDEX,
                 }
             ),
-            texture: loaded_texture,
             bind_group,
+            texture: loaded_texture,
             shader: mesh.shader.clone(),
         };
     }
 
-    fn cast<A, B>(input: &[A]) -> &[B] {
+    pub fn cast<A, B>(input: &[A]) -> &[B] {
         let new_len = core::mem::size_of_val(input) / size_of::<u8>();
         return unsafe { core::slice::from_raw_parts(input.as_ptr() as *const B, new_len) };
     }
 
-    pub fn update(&mut self, data: FrameData) {}
+    pub fn update(&mut self, _data: FrameData) {}
 }

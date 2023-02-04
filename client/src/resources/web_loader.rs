@@ -25,7 +25,7 @@ impl ContentPack for WebLoader {
         todo!()
     }
 
-    fn assets(&self, handle: &Handle) -> JoinHandle<Vec<AssetType>> {
+    fn assets(&self, _handle: &Handle) -> JoinHandle<Vec<AssetType>> {
         todo!()
     }
     
@@ -37,7 +37,7 @@ impl ContentPack for WebLoader {
         todo!()
     }
 
-    fn get_relative(&self, path: PathBuf) -> String {
+    fn get_relative(&self, _path: PathBuf) -> String {
         todo!()
     }
 }

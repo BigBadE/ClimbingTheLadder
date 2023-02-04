@@ -33,7 +33,7 @@ pub struct Game {
     pub task_manager: TaskManager,
     pub resource_manager: Arc<Mutex<ResourceManager>>,
     worlds: Vec<World>,
-    mods: ModManager,
+    _mods: ModManager,
     registerer: HashMap<&'static str, Arc<dyn ThingRegister>>,
     loaded: bool,
     #[cfg(feature = "renderer")]
@@ -57,7 +57,7 @@ impl Game {
             settings,
             task_manager,
             resource_manager,
-            mods,
+            _mods: mods,
             worlds: Vec::new(),
             registerer: hashmap!("world" => WorldAttachmentRegister::get_registerer()),
             loaded: false,

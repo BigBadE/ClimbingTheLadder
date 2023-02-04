@@ -1,4 +1,3 @@
-use game::util::types::Vector2;
 use crate::ui::layout::LayoutConstraint;
 
 pub struct PixelConstraint {

@@ -4,18 +4,18 @@ use crate::world::world::WorldData;
 static mut NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
 pub struct Entity {
-    id: u64
+    _id: u64
 }
 
 impl Entity {
     //Creates a new entity. These aren't in a world yet, and must be spawned
     pub fn new() -> Self {
         return Self {
-            id: Self::get_next_id()
+            _id: Self::get_next_id()
         }
     }
 
-    pub fn spawn(mut self, _world: &mut WorldData) {
+    pub fn spawn(self, _world: &mut WorldData) {
         todo!();
     }
 

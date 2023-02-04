@@ -23,6 +23,7 @@ anyhow = "1.0.66"
 instant = "0.1.12"
 log = "0.4"
 lazy_static = "1.4.0"
+cgmath = "0.18.0"
 
 # Multithreading
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -48,5 +49,5 @@ web-sys = { version = "0.3", features = [
 crate-type = ["cdylib", "rlib"]
 
 [[bin]]
-name = "ClimbingTheLadder"
+name = "climbing_the_ladder"
 path = "src/main.rs"

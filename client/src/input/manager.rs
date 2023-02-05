@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use json::JsonValue;
 use json::object::Object;
 use winit::event::{ElementState, MouseButton, VirtualKeyCode};
-use game::hashmap;
+use game::{Game, hashmap};
 
 pub type PressedKey = (VirtualKeyCode, u32);
-pub type KeyAction = (&'static str, fn(&ElementState));
+pub type KeyAction = (&'static str, fn(&mut Game, &ElementState));
 
 //Each key is a combination of 32 bit modifier + 32 bit scancode
 pub struct InputManager {
@@ -27,12 +27,12 @@ impl InputManager {
     }
 
     //Maps a given keycode and modifier to the function it should call
-    pub fn map(&self, modifiers: u32, keycode: VirtualKeyCode) -> Option<fn(&ElementState)> {
+    pub fn map(&self, modifiers: u32, keycode: VirtualKeyCode) -> Option<fn(&mut Game, &ElementState)> {
         return self.keys.get(&(keycode, modifiers)).map(|tuple| tuple.1);
     }
 
     //Maps a given mouse click to the function it should call
-    pub fn map_mouse(&self, button: &MouseButton) -> Option<fn(&ElementState)> {
+    pub fn map_mouse(&self, button: &MouseButton) -> Option<fn(&mut Game, &ElementState)> {
         return self.keys.get(&(Self::map_mouse_press(button), 0)).map(|tuple| tuple.1);
     }
 

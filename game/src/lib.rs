@@ -4,23 +4,19 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::runtime::Handle;
-use crate::mods::mod_manager::ModManager;
-use crate::mods::ModProvider;
 use crate::mods::mods::GameMod;
-use crate::register::ThingRegister;
-use crate::register::world::WorldAttachmentRegister;
-use crate::rendering::assets::AssetReference;
 use crate::rendering::renderer::Renderer;
-use crate::resources::content_pack::{ContentPack, load_content};
+use crate::resources::content_pack::ContentPack;
 use crate::resources::resource_manager::ResourceManager;
 use crate::settings::Settings;
 use crate::util::alloc_handle::AllocHandle;
+use crate::util::register::{GenericRegister, ThingRegister};
 use crate::util::task_manager::TaskManager;
+use crate::world::attachments::WorldAttachment;
 use crate::world::world::World;
 
 pub mod language;
 pub mod mods;
-pub mod register;
 #[cfg(feature = "renderer")]
 pub mod rendering;
 pub mod resources;
@@ -33,54 +29,40 @@ pub struct Game {
     pub task_manager: TaskManager,
     pub resource_manager: Arc<Mutex<ResourceManager>>,
     worlds: Vec<World>,
-    _mods: ModManager,
-    registerer: HashMap<&'static str, Arc<dyn ThingRegister>>,
-    loaded: bool,
-    #[cfg(feature = "renderer")]
-    renderer: Arc<dyn Renderer>
+    registerer: HashMap<&'static str, Box<dyn ThingRegister>>,
+    loaded: bool
 }
 
 impl Game {
-    pub fn new(mods: Box<dyn ModProvider>, content: Box<dyn ContentPack>, mut task_manager: TaskManager,
-               #[cfg(feature = "renderer")]asset_reference: Box<dyn AssetReference>,
-               #[cfg(feature = "renderer")]renderer: Arc<dyn Renderer>) -> Self {
+    pub fn new(resource_manager: Arc<Mutex<ResourceManager>>, mut task_manager: TaskManager,
+               mut registerer: HashMap<&'static str, Box<dyn ThingRegister>>) -> Self {
         println!("Starting game");
         let settings = Settings::new();
-        #[cfg(feature = "renderer")]
-        let resource_manager = Arc::new(Mutex::new(ResourceManager::new(asset_reference)));
-        #[cfg(not(feature = "renderer"))]
-            let resource_manager = Arc::new(Mutex::new(ResourceManager::new()));
-        load_content(&resource_manager, &mut task_manager, content);
-        let mods = ModManager::new(mods.get_mods(&task_manager.get_runtime(false)));
+        resource_manager.lock().unwrap().content.clone_boxed().load(&resource_manager, &mut task_manager);
+
+        Self::add_registers(&mut registerer);
 
         return Self {
             settings,
             task_manager,
             resource_manager,
-            _mods: mods,
             worlds: Vec::new(),
-            registerer: hashmap!("world" => WorldAttachmentRegister::get_registerer()),
-            loaded: false,
-            #[cfg(feature = "renderer")]
-            renderer
+            registerer,
+            loaded: false
         };
     }
 
-    pub async fn finish_loading(handle: Handle, #[cfg(feature = "renderer")] renderer: Arc<dyn Renderer>,
-                                resources: Arc<Mutex<ResourceManager>>, found_attachments: Arc<dyn ThingRegister>) -> AllocHandle {
-        resources.lock().unwrap().asset_manager.get_texture(&"testing/dirt".to_string()).unwrap();
-        #[cfg(feature = "renderer")]
-        return Self::create_world(handle, renderer, resources, found_attachments).await;
-        #[cfg(not(feature = "renderer"))]
+    fn add_registers(registerer: &mut HashMap<&'static str, Box<dyn ThingRegister>>) {
+        registerer.insert("world", Box::new(GenericRegister::from(vec!())));
+    }
+
+    pub async fn finish_loading(handle: Handle, resources: Arc<Mutex<ResourceManager>>,
+                                found_attachments: Vec<Box<dyn WorldAttachment>>) -> AllocHandle {
         return Self::create_world(handle, resources, found_attachments).await;
     }
 
-    pub async fn create_world(handle: Handle, #[cfg(feature = "renderer")] renderer: Arc<dyn Renderer>,
-                              resources: Arc<Mutex<ResourceManager>>, found_attachments: Arc<dyn ThingRegister>) -> AllocHandle {
-        #[cfg(feature = "renderer")]
-        return AllocHandle::new(World::new(&handle, renderer,
-                                           resources, found_attachments));
-        #[cfg(not(feature = "renderer"))]
+    pub async fn create_world(handle: Handle, resources: Arc<Mutex<ResourceManager>>,
+                              found_attachments: Vec<Box<dyn WorldAttachment>>) -> AllocHandle {
         return AllocHandle::new(World::new(&handle, resources, found_attachments));
     }
 
@@ -100,9 +82,9 @@ impl Game {
 
         if !self.loaded {
             self.loaded = true;
-            let loader = Self::finish_loading(self.task_manager.get_runtime(false).clone(),
-                                              #[cfg(feature = "renderer")] self.renderer.clone(),
-                                              self.resource_manager.clone(), self.registerer.get("world").unwrap().clone());
+            let loader =
+                Self::finish_loading(self.task_manager.get_runtime(false).clone(), self.resource_manager.clone(),
+                                     AllocHandle::convert(self.registerer.get("world").unwrap().registered()));
 
             self.task_manager.queue_after(false, loader, Self::done_loading);
             return self.settings.updates_per_second;

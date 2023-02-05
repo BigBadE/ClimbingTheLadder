@@ -8,11 +8,8 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn new(resources: &ResourceManager, #[cfg(feature = "renderer")] arc: Arc<dyn Renderer>) -> Self {
-        #[cfg(feature = "renderer")]
-            let blocks = vec!(Block::new(resources, arc));
-        #[cfg(not(feature = "renderer"))]
-            let blocks = vec!(Block::new());
+    pub fn new(resources: &ResourceManager) -> Self {
+        let blocks = vec!(Block::new(resources));
 
         return Self {
             _blocks: blocks

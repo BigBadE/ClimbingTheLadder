@@ -76,7 +76,7 @@ impl Client {
     pub(crate) fn key_input(&mut self, input: &KeyboardInput) {
         match input.virtual_keycode {
             Some(keycode) => match self.window.settings.inputs.map(self.window.modifiers, keycode) {
-                Some(function) => function(&input.state),
+                Some(function) => function(&mut self.game, &input.state),
                 None => {}
             },
             None => {}
@@ -85,7 +85,7 @@ impl Client {
 
     pub(crate) fn mouse_input(&mut self, button: &MouseButton, state: &ElementState) {
         match self.window.settings.inputs.map_mouse(button) {
-            Some(function) => function(state),
+            Some(function) => function(&mut self.game, state),
             None => {}
         }
     }

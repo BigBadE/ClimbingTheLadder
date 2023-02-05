@@ -10,7 +10,11 @@ use json::object::Object;
 use tokio::runtime::Handle;
 use tokio::task::{JoinError, JoinSet};
 use crate::{ContentPack, error, TaskManager};
+use crate::language::language::LANGUAGE_MANAGER;
+use crate::mods::mod_manager::ModManager;
+use crate::mods::mods::GameMod;
 use crate::rendering::assets::AssetReference;
+use crate::rendering::renderer::Renderer;
 use crate::resources::resource_loader::ResourceLoader;
 use crate::util::alloc_handle::AllocHandle;
 
@@ -28,19 +32,27 @@ pub struct ResourceManager {
     pub(crate) named_types: HashMap<String, usize>,
     pub(crate) all_types: Vec<Arc<AllocHandle>>,
     #[cfg(feature = "renderer")]
-    pub asset_manager: Box<dyn AssetReference>
+    pub asset_manager: Box<dyn AssetReference>,
+    pub renderer: Arc<dyn Renderer>,
+    pub content: Box<dyn ContentPack>,
+    pub _mods: ModManager,
 }
 
 impl ResourceManager {
-    pub fn new(
-        #[cfg(feature = "renderer")]asset_manager: Box<dyn AssetReference>) -> Self {
+    pub fn new(content: Box<dyn ContentPack>, mods: JoinSet<Result<GameMod, Error>>,
+               #[cfg(feature = "renderer")]asset_manager: Box<dyn AssetReference>,
+               #[cfg(feature = "renderer")]renderer: Arc<dyn Renderer>) -> Self {
         return ResourceManager {
             instantiators: HashMap::new(),
             types: HashMap::new(),
             named_types: HashMap::new(),
             all_types: Vec::new(),
             #[cfg(feature = "renderer")]
-            asset_manager
+            asset_manager,
+            #[cfg(feature = "renderer")]
+            renderer,
+            content,
+            _mods: ModManager::new(mods),
         };
     }
 
@@ -57,19 +69,6 @@ impl ResourceManager {
             output.push(self.all_types[*value].read());
         }
         return output;
-    }
-
-    pub fn load_all(reference: &Arc<Mutex<Self>>, task_manager: &mut TaskManager,
-                    loading: &Box<dyn ContentPack>) -> Arc<Mutex<ResourceLoader>> {
-        let resource_loader = Arc::new(Mutex::new(
-            ResourceLoader::new(reference.clone())));
-        for json in loading.types() {
-            let loader = task_manager.get_runtime(true).spawn(Self::load_json(json.clone()));
-            task_manager.queue(false,
-                Self::load_types(loader, loading.get_relative(json), resource_loader.clone(),
-                                 task_manager.get_runtime(false).clone()));
-        }
-        return resource_loader;
     }
 
     async fn load_json(path: PathBuf) -> Result<JsonValue, Error> {

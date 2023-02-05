@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use anyhow::Error;
 use image::{ImageFormat, RgbaImage};
 use json::JsonValue;
@@ -15,6 +15,9 @@ use game::language::language::LanguagePack;
 use game::rendering::{AssetType, GameTexture};
 use game::rendering::mesh::Mesh;
 use game::resources::content_pack::ContentPack;
+use game::resources::resource_loader::ResourceLoader;
+use game::resources::resource_manager::ResourceManager;
+use game::util::task_manager::TaskManager;
 
 #[derive(Clone)]
 pub struct DesktopLoader {
@@ -22,6 +25,51 @@ pub struct DesktopLoader {
 }
 
 impl ContentPack for DesktopLoader {
+    fn load(&self, resource_manager: &Arc<Mutex<ResourceManager>>, task_manager: &mut TaskManager) {
+        let resource_loader = Arc::new(Mutex::new(ResourceLoader::new(resource_manager.clone())));
+
+        for json in self.types() {
+            let loader = task_manager.get_runtime(true).spawn(Self::load_json(json.clone()));
+            task_manager.queue(false,
+                               Self::load_types(loader, self.get_relative(json), resource_loader.clone(),
+                                                task_manager.get_runtime(false).clone()));
+        }
+    }
+
+    fn early_load(&self, task_manager: &mut TaskManager) {
+        todo!()
+    }
+
+    fn types(&self) -> Vec<PathBuf> {
+        let path = self.root.join("types");
+
+        if !path.exists() {
+            return Vec::new();
+        }
+
+        let mut loading = Vec::new();
+        return match DesktopLoader::find_files(path, &mut loading) {
+            Ok(_) => loading,
+            Err(error) => {
+                error!("Error loading JSON types: {}", error);
+                return Vec::new();
+            }
+        };
+    }
+
+    fn clone_boxed(&self) -> Box<dyn ContentPack> {
+        return Box::new(self.clone());
+    }
+
+    fn get_relative(&self, path: PathBuf) -> String {
+        let mut name = path.to_str().unwrap().replace(self.root.to_str().unwrap(), "")
+            .replace(path::MAIN_SEPARATOR, "/").split('.').nth(0).unwrap().to_string();
+        name.remove(0);
+        return name;
+    }
+}
+
+impl DesktopLoader {
     fn shaders(&self) -> Vec<(String, String)> {
         return match DesktopLoader::load_text(self.root.join("shaders"), vec!("load_first")) {
             Ok(result) => result,
@@ -37,23 +85,6 @@ impl ContentPack for DesktopLoader {
             Ok(result) => result,
             Err(error) => {
                 error!("Error loading load-first shaders: {}", error);
-                return Vec::new();
-            }
-        };
-    }
-
-    fn types(&self) -> Vec<PathBuf> {
-        let path = self.root.join("types");
-
-        if !path.exists() {
-            return Vec::new();
-        }
-
-        let mut loading = Vec::new();
-        return match DesktopLoader::find_files(path, &mut loading) {
-            Ok(_) => loading,
-            Err(error) => {
-                error!("Error loading JSON types: {}", error);
                 return Vec::new();
             }
         };
@@ -99,17 +130,6 @@ impl ContentPack for DesktopLoader {
             Err(error) => error!("Error loading translations: {}", error)
         }
         return output;
-    }
-
-    fn clone_boxed(&self) -> Box<dyn ContentPack> {
-        return Box::new(self.clone());
-    }
-
-    fn get_relative(&self, path: PathBuf) -> String {
-        let mut name = path.to_str().unwrap().replace(self.root.to_str().unwrap(), "")
-            .replace(path::MAIN_SEPARATOR, "/").split('.').nth(0).unwrap().to_string();
-        name.remove(0);
-        return name;
     }
 }
 

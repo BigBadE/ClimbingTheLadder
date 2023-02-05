@@ -1,5 +1,6 @@
 use std::{env, fs};
 use std::fs::DirEntry;
+use std::path::PathBuf;
 use anyhow::Error;
 use libloading::{Library, Symbol};
 use log::error;
@@ -10,36 +11,22 @@ use game::mods::ModProvider;
 use game::mods::mods::{GameMod, ModManifest};
 use crate::DesktopLoader;
 
-pub struct ModLoader {
+fn get_mods(path: PathBuf, runtime: &Handle) -> JoinSet<Result<GameMod, Error>> {
+    let mod_folder = path.join("mods");
+    if !mod_folder.exists() {
+        return JoinSet::new();
+    }
 
-}
-
-impl ModProvider for ModLoader {
-    fn get_mods(&self, runtime: &Handle) -> JoinSet<Result<GameMod, Error>> {
-        let mod_folder = env::current_dir().ok().unwrap().join("mods");
-        if !mod_folder.exists() {
-            return JoinSet::new();
-        }
-
-        let mut output = JoinSet::new();
-        for mod_folder in fs::read_dir(mod_folder).unwrap() {
-            match mod_folder {
-                Ok(mod_folder) => {
-                    output.spawn_on(load_mod(mod_folder), &runtime);
-                },
-                Err(error) => error!("Error opening mod folder:\n{}", error)
+    let mut output = JoinSet::new();
+    for mod_folder in fs::read_dir(mod_folder).unwrap() {
+        match mod_folder {
+            Ok(mod_folder) => {
+                output.spawn_on(load_mod(mod_folder), &runtime);
             }
-        }
-        return output;
-    }
-}
-
-impl ModLoader {
-    pub fn new() -> Self {
-        return Self {
-
+            Err(error) => error!("Error opening mod folder:\n{}", error)
         }
     }
+    return output;
 }
 
 async fn load_mod(mod_folder: DirEntry) -> Result<GameMod, Error> {
@@ -53,7 +40,7 @@ async fn load_mod(mod_folder: DirEntry) -> Result<GameMod, Error> {
         .join(format!("{}.rlib", env::consts::ARCH));
     if !target.exists() {
         return Err(Error::msg(format!("Mod {} doesn't support arch {} (no rlib found)",
-                                      manifest.name, env::consts::ARCH)))
+                                      manifest.name, env::consts::ARCH)));
     }
     let library = match unsafe { Library::new(target) } {
         Ok(lib) => lib,

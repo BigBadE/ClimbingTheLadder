@@ -1,5 +1,3 @@
-use std::sync::Arc;
-use crate::rendering::renderer::Renderer;
 use crate::resources::resource_manager::ResourceManager;
 use crate::world::cubes::cube::Cube;
 
@@ -8,9 +6,9 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new(resources: &ResourceManager, #[cfg(feature = "renderer")] arc: Arc<dyn Renderer>) -> Self {
+    pub fn new(resources: &ResourceManager) -> Self {
         let mut testing = [Cube::empty(); 25];
-        testing[0] = Cube::new(resources, #[cfg(feature = "renderer")] &arc);
+        testing[0] = Cube::new(resources);
         return Self {
             _cubes: testing
         }

@@ -6,6 +6,7 @@ use tokio::task::JoinHandle;
 use game::language::language::LanguagePack;
 use game::rendering::AssetType;
 use game::resources::content_pack::ContentPack;
+use game::util::task_manager::TaskManager;
 
 #[derive(Clone)]
 pub struct WebLoader {
@@ -13,23 +14,15 @@ pub struct WebLoader {
 }
 
 impl ContentPack for WebLoader {
-    fn shaders(&self) -> Vec<(String, String)> {
+    fn load(&self, task_manager: &mut TaskManager) {
         todo!()
     }
 
-    fn load_first_shaders(&self) -> Vec<(String, String)> {
+    fn early_load(&self, task_manager: &mut TaskManager) {
         todo!()
     }
 
     fn types(&self) -> Vec<PathBuf> {
-        todo!()
-    }
-
-    fn assets(&self, _handle: &Handle) -> JoinHandle<Vec<AssetType>> {
-        todo!()
-    }
-    
-    fn language(&self) -> Vec<LanguagePack> {
         todo!()
     }
 

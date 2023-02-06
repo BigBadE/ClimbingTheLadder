@@ -7,11 +7,10 @@ use log::error;
 use tokio::runtime::Handle;
 use tokio::task::JoinSet;
 use game::mods::mod_trait::ModMain;
-use game::mods::ModProvider;
 use game::mods::mods::{GameMod, ModManifest};
 use crate::DesktopLoader;
 
-fn get_mods(path: PathBuf, runtime: &Handle) -> JoinSet<Result<GameMod, Error>> {
+pub(crate) fn get_mods(path: PathBuf, runtime: &Handle) -> JoinSet<Result<GameMod, Error>> {
     let mod_folder = path.join("mods");
     if !mod_folder.exists() {
         return JoinSet::new();
@@ -50,7 +49,8 @@ async fn load_mod(mod_folder: DirEntry) -> Result<GameMod, Error> {
     };
 
     let func: Symbol<unsafe extern fn() -> Box<dyn ModMain + Send>> = unsafe { library.get(manifest.main.as_bytes())? };
-    let found_mod = GameMod::new(manifest, Box::new(DesktopLoader::new(mod_folder.path())), unsafe { func() });
+    let _content = Box::new(DesktopLoader::new(mod_folder.path()));
+    let found_mod = GameMod::new(manifest, unsafe { func() });
 
     return Ok(found_mod);
 }

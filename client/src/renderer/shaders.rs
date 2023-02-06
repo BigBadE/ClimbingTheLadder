@@ -1,12 +1,17 @@
 use std::collections::HashMap;
+use std::fs;
 use std::ops::Deref;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use lazy_static::lazy_static;
+use tokio::runtime::Handle;
+use tokio::task::JoinSet;
 use wgpu::{BindGroupLayoutEntry, ShaderStages, BindingType, TextureViewDimension, TextureSampleType, SamplerBindingType, BlendState, ColorTargetState, ColorWrites, Device, Face, FragmentState, FrontFace, MultisampleState, PipelineLayoutDescriptor, PolygonMode, PrimitiveState, PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor, ShaderModule, ShaderModuleDescriptor, ShaderSource, SurfaceConfiguration, VertexState, VertexAttribute, vertex_attr_array};
+use game::error;
 use game::rendering::mesh::Vertex;
-use game::resources::content_pack::ContentPack;
 use game::util::alloc_handle::AllocHandle;
 use crate::renderer::renderer::RENDERER;
+use crate::resources::content_pack::ContentPack;
 
 pub struct ShaderManager {
     pub shaders: HashMap<String, (RenderPipeline, ShaderModule)>,
@@ -45,30 +50,44 @@ impl ShaderManager {
         };
     }
 
-    pub async fn load(device: Arc<Mutex<Device>>, config: SurfaceConfiguration, load_first: bool, content: Box<dyn ContentPack>) -> AllocHandle {
-        let device = device.lock().unwrap();
-        let device = device.deref();
-        let mut shaders = HashMap::new();
-        let found_shaders;
-        if load_first {
-            found_shaders = content.load_first_shaders();
-        } else {
-            found_shaders = content.shaders();
+    pub fn get_shaders(first: bool, runtime: Handle, content: Box<dyn ContentPack>) -> JoinSet<(String, String)> {
+        let mut loading = JoinSet::new();
+        for shader in content.shaders(first) {
+            loading.spawn_on(Self::load_shader(content.get_relative("shaders/", &shader), shader), &runtime);
         }
+        return loading;
+    }
 
-        for (name, source) in found_shaders {
+    async fn load_shader(relative: String, shader: PathBuf) -> (String, String) {
+        return match fs::read_to_string(shader) {
+            Ok(shader) => (relative, shader),
+            Err(error) => {
+                error!("Error loading shader:\n{}", error);
+                (relative, String::new())
+            }
+        };
+    }
+
+    pub async fn load(device: Arc<Mutex<Device>>, config: SurfaceConfiguration,
+                      mut shaders: JoinSet<(String, String)>) -> AllocHandle {
+        while let Some(result) = shaders.join_next().await {
+            let (name, source) = match result {
+                Ok(result) => result,
+                Err(error) => {
+                    error!("Failed to load shader:\n{}", error);
+                    continue
+                }
+            };
+
+            let device = device.lock().unwrap();
+            let device = device.deref();
+
             let shader = device.create_shader_module(ShaderModuleDescriptor {
                 label: Some(name.as_str()),
                 source: ShaderSource::Wgsl(source.into()),
             });
-            shaders.insert(name.clone(), (Self::get_pipeline(device, &config, &shader), shader));
+            SHADER_MANAGER.lock().unwrap().shaders.insert(name.clone(), (Self::get_pipeline(device, &config, &shader), shader));
         }
-        let mut manager = SHADER_MANAGER.lock().unwrap();
-        for (name, shader) in shaders {
-            manager.shaders.insert(name, shader);
-        }
-
-        manager.loaded_ui_shaders = true;
 
         return AllocHandle::empty();
     }
@@ -76,12 +95,12 @@ impl ShaderManager {
     pub fn get_pipeline(device: &Device, config: &SurfaceConfiguration, shader: &ShaderModule) -> RenderPipeline {
         let bind_group = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: BIND_LAYOUT.deref(),
-            label: Some("Texture Bind Group Layout")
+            label: Some("Texture Bind Group Layout"),
         });
         let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
             bind_group_layouts: &[&bind_group, &RENDERER.lock().unwrap().camera.as_ref().unwrap().camera_bind_group_layout],
-            push_constant_ranges: &[]
+            push_constant_ranges: &[],
         });
         return device.create_render_pipeline(&RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
@@ -97,8 +116,8 @@ impl ShaderManager {
                 targets: &[Some(ColorTargetState {
                     format: config.format,
                     blend: Some(BlendState::REPLACE),
-                    write_mask: ColorWrites::ALL
-                })]
+                    write_mask: ColorWrites::ALL,
+                })],
             }),
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,
@@ -107,15 +126,15 @@ impl ShaderManager {
                 cull_mode: Some(Face::Back),
                 polygon_mode: PolygonMode::Fill,
                 unclipped_depth: false,
-                conservative: false
+                conservative: false,
             },
             depth_stencil: None,
             multisample: MultisampleState {
                 count: 1,
                 mask: !0,
-                alpha_to_coverage_enabled: false
+                alpha_to_coverage_enabled: false,
             },
-            multiview: None
+            multiview: None,
         });
     }
 

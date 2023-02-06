@@ -49,7 +49,7 @@ impl AllocHandle {
         }
     }
 
-    pub(crate) fn convert<T: 'static>(handles: Vec<AllocHandle>) -> Vec<T> {
+    pub fn convert<T: 'static>(handles: Vec<AllocHandle>) -> Vec<T> {
         let mut output = Vec::new();
         for handle in handles {
             output.push(handle.deref());

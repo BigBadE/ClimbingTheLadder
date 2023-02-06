@@ -1,16 +1,16 @@
 //No main in WASM
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
+use std::collections::HashMap;
 use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Builder;
-use game::{Game, hashmap};
+use game::Game;
 use game::resources::resource_manager::ResourceManager;
-use game::util::register::GenericRegister;
+use game::util::register::{GenericRegister, ThingRegister};
 use game::util::task_manager::TaskManager;
 use crate::display::window::GameWindow;
-use crate::input::manager::KeyAction;
-use crate::mods::mod_loader::ModLoader;
+use crate::mods::mod_loader;
 use crate::renderer::assets::AssetReferer;
 use crate::renderer::renderer::RENDERER_REF;
 use crate::resources::desktop_loader::DesktopLoader;
@@ -56,9 +56,14 @@ fn main() {
     let content = Box::new(DesktopLoader::new(directory.clone()));
     let task_manager = TaskManager::new(cpu_runtime.handle().clone(), io_runtime.handle().clone());
     let resource_manager = Arc::new(Mutex::new(
-        ResourceManager::new(Box::new(ModLoader::new()), ModLoader::get_mods(directory, cpu_runtime.handle()),
+        ResourceManager::new(mod_loader::get_mods(directory, cpu_runtime.handle()),
                              Box::new(AssetReferer::new()), RENDERER_REF.clone())));
-    let game = Game::new(resource_manager, task_manager,
-                         hashmap!("keyaction" => Arc::new(GenericRegister::<KeyAction>::from())));
+    let game = Game::new(resource_manager, task_manager, get_registerers());
     GameWindow::run(game, content, main_runtime);
+}
+
+fn get_registerers() -> HashMap<&'static str, Box<dyn ThingRegister>> {
+    let mut registerer: HashMap<&'static str, Box<dyn ThingRegister>> = HashMap::new();
+    registerer.insert("keyaction", Box::new(GenericRegister::from(vec!())));
+    return registerer;
 }

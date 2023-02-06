@@ -1,6 +1,4 @@
-use winit::event::{ElementState, VirtualKeyCode};
-use crate::input::manager::InputManager;
-use crate::ui::manager::UIManager;
+use winit::event::ElementState;
 
 fn toggle_console(state: &ElementState) {
     if state != &ElementState::Pressed {

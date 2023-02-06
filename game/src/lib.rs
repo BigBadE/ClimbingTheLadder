@@ -5,8 +5,6 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::runtime::Handle;
 use crate::mods::mods::GameMod;
-use crate::rendering::renderer::Renderer;
-use crate::resources::content_pack::ContentPack;
 use crate::resources::resource_manager::ResourceManager;
 use crate::settings::Settings;
 use crate::util::alloc_handle::AllocHandle;
@@ -28,9 +26,9 @@ pub struct Game {
     pub settings: Settings,
     pub task_manager: TaskManager,
     pub resource_manager: Arc<Mutex<ResourceManager>>,
+    pub loaded: LoadingStage,
+    pub registerer: HashMap<&'static str, Box<dyn ThingRegister>>,
     worlds: Vec<World>,
-    registerer: HashMap<&'static str, Box<dyn ThingRegister>>,
-    loaded: bool
 }
 
 impl Game {
@@ -38,7 +36,6 @@ impl Game {
                mut registerer: HashMap<&'static str, Box<dyn ThingRegister>>) -> Self {
         println!("Starting game");
         let settings = Settings::new();
-        resource_manager.lock().unwrap().content.clone_boxed().load(&resource_manager, &mut task_manager);
 
         Self::add_registers(&mut registerer);
 
@@ -48,7 +45,7 @@ impl Game {
             resource_manager,
             worlds: Vec::new(),
             registerer,
-            loaded: false
+            loaded: LoadingStage::Early
         };
     }
 
@@ -57,7 +54,7 @@ impl Game {
     }
 
     pub async fn finish_loading(handle: Handle, resources: Arc<Mutex<ResourceManager>>,
-                                found_attachments: Vec<Box<dyn WorldAttachment>>) -> AllocHandle {
+    found_attachments: Vec<Box<dyn WorldAttachment>>) -> AllocHandle {
         return Self::create_world(handle, resources, found_attachments).await;
     }
 
@@ -80,16 +77,6 @@ impl Game {
             return self.settings.updates_per_second;
         }
 
-        if !self.loaded {
-            self.loaded = true;
-            let loader =
-                Self::finish_loading(self.task_manager.get_runtime(false).clone(), self.resource_manager.clone(),
-                                     AllocHandle::convert(self.registerer.get("world").unwrap().registered()));
-
-            self.task_manager.queue_after(false, loader, Self::done_loading);
-            return self.settings.updates_per_second;
-        }
-
         let mut removed = usize::MAX;
         let mut i = 0;
         for world in &mut self.worlds {
@@ -106,9 +93,15 @@ impl Game {
         return self.settings.updates_per_second;
     }
 
-    fn done_loading(game: &mut Game, world: AllocHandle) {
+    pub fn done_loading(game: &mut Game, world: AllocHandle) {
         game.worlds.push(world.deref());
     }
+}
+
+pub enum LoadingStage {
+    Early,
+    Loading,
+    Finished
 }
 
 #[macro_export]

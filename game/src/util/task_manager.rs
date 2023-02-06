@@ -63,6 +63,15 @@ impl TaskManager {
         }
     }
 
+    pub fn wait(&mut self, after: fn(&mut Game, AllocHandle)) {
+        self.tasks.push(Task {
+            handle: self.cpu_runtime.spawn(Self::empty_async()),
+            after
+        })
+    }
+
+    async fn empty_async() -> AllocHandle { AllocHandle::empty() }
+
     fn empty(_: &mut Game, _: AllocHandle) {}
 
     pub async fn poll(&mut self) -> (bool, Option<FinishedTask>) {

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-use crate::rendering::renderer::Renderer;
 use crate::resources::resource_manager::ResourceManager;
 use crate::world::blocks::block::Block;
 

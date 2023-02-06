@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use anyhow::Error;
 use image::{ImageFormat, RgbaImage};
 use json::JsonValue;
@@ -14,10 +14,7 @@ use game::error;
 use game::language::language::LanguagePack;
 use game::rendering::{AssetType, GameTexture};
 use game::rendering::mesh::Mesh;
-use game::resources::content_pack::ContentPack;
-use game::resources::resource_loader::ResourceLoader;
-use game::resources::resource_manager::ResourceManager;
-use game::util::task_manager::TaskManager;
+use crate::resources::content_pack::ContentPack;
 
 #[derive(Clone)]
 pub struct DesktopLoader {
@@ -25,21 +22,6 @@ pub struct DesktopLoader {
 }
 
 impl ContentPack for DesktopLoader {
-    fn load(&self, resource_manager: &Arc<Mutex<ResourceManager>>, task_manager: &mut TaskManager) {
-        let resource_loader = Arc::new(Mutex::new(ResourceLoader::new(resource_manager.clone())));
-
-        for json in self.types() {
-            let loader = task_manager.get_runtime(true).spawn(Self::load_json(json.clone()));
-            task_manager.queue(false,
-                               Self::load_types(loader, self.get_relative(json), resource_loader.clone(),
-                                                task_manager.get_runtime(false).clone()));
-        }
-    }
-
-    fn early_load(&self, task_manager: &mut TaskManager) {
-        todo!()
-    }
-
     fn types(&self) -> Vec<PathBuf> {
         let path = self.root.join("types");
 
@@ -48,7 +30,7 @@ impl ContentPack for DesktopLoader {
         }
 
         let mut loading = Vec::new();
-        return match DesktopLoader::find_files(path, &mut loading) {
+        return match DesktopLoader::find_files(path, &mut loading, vec!()) {
             Ok(_) => loading,
             Err(error) => {
                 error!("Error loading JSON types: {}", error);
@@ -57,40 +39,14 @@ impl ContentPack for DesktopLoader {
         };
     }
 
-    fn clone_boxed(&self) -> Box<dyn ContentPack> {
-        return Box::new(self.clone());
+    fn get_relative(&self, subpath: &str, path: &PathBuf) -> String {
+        return path.to_str().unwrap().replace(&self.root.to_str().unwrap().to_string(), "")
+            .replace(path::MAIN_SEPARATOR, "/")
+            .replace(&("/".to_string() + subpath), "")
+            .split('.').nth(0).unwrap().to_string();
     }
 
-    fn get_relative(&self, path: PathBuf) -> String {
-        let mut name = path.to_str().unwrap().replace(self.root.to_str().unwrap(), "")
-            .replace(path::MAIN_SEPARATOR, "/").split('.').nth(0).unwrap().to_string();
-        name.remove(0);
-        return name;
-    }
-}
-
-impl DesktopLoader {
-    fn shaders(&self) -> Vec<(String, String)> {
-        return match DesktopLoader::load_text(self.root.join("shaders"), vec!("load_first")) {
-            Ok(result) => result,
-            Err(error) => {
-                error!("Error loading shaders: {}", error);
-                return Vec::new();
-            }
-        };
-    }
-
-    fn load_first_shaders(&self) -> Vec<(String, String)> {
-        return match DesktopLoader::load_text(self.root.join("shaders/load_first"), vec!()) {
-            Ok(result) => result,
-            Err(error) => {
-                error!("Error loading load-first shaders: {}", error);
-                return Vec::new();
-            }
-        };
-    }
-
-    fn assets(&self, handle: &Handle) -> JoinHandle<Vec<AssetType>> {
+    fn assets(&self, handle: &Handle, load_first: bool) -> JoinHandle<Vec<AssetType>> {
         let mut output = Vec::new();
         match DesktopLoader::load_json(self.root.join("assets/models")) {
             Ok(value) => {
@@ -104,7 +60,14 @@ impl DesktopLoader {
         }
 
         let mut temp = Vec::new();
-        match DesktopLoader::find_files(self.root.join("assets/textures"), &mut temp) {
+        let loading;
+        if load_first {
+            loading = DesktopLoader::find_files(self.root.join("assets/textures/load_first"), &mut temp, vec!());
+        } else {
+            loading = DesktopLoader::find_files(self.root.join("assets/textures"), &mut temp, vec!("load_first"));
+        }
+
+        match loading {
             Ok(_) => {}
             Err(error) => {
                 error!("Error finding textures: {}", error)
@@ -131,8 +94,30 @@ impl DesktopLoader {
         }
         return output;
     }
+
+    fn shaders(&self, early: bool) -> Vec<PathBuf> {
+        let shaders;
+        let mut loading = Vec::new();
+        if early {
+            shaders = DesktopLoader::find_files(self.root.join("shaders/load_first"), &mut loading, Vec::new());
+        } else {
+            shaders = DesktopLoader::find_files(self.root.join("shaders"), &mut loading, vec!("load_first"));
+        }
+        return match shaders {
+            Ok(_) => loading,
+            Err(error) => {
+                error!("Error loading shaders: {}", error);
+                return Vec::new();
+            }
+        };
+    }
+
+    fn clone_boxed(&self) -> Box<dyn ContentPack> {
+        return Box::new(self.clone());
+    }
 }
 
+#[derive(Debug)]
 pub struct TextureWrapper {
     texture: RgbaImage,
     name: String,
@@ -192,23 +177,6 @@ impl DesktopLoader {
         })));
     }
 
-    fn load_text(directory: PathBuf, ignore: Vec<&str>) -> Result<Vec<(String, String)>, Error> {
-        if !directory.exists() {
-            return Ok(Vec::new());
-        }
-
-        let mut output = Vec::new();
-        for file in fs::read_dir(directory.clone())? {
-            let file = file?;
-            let name = Self::get_relative_path(directory.clone(), file.path());
-            if ignore.contains(&name.as_str()) {
-                continue;
-            }
-            output.push((name, String::from_utf8(fs::read(file.path())?)?));
-        }
-        return Ok(output);
-    }
-
     fn get_relative_path(base: PathBuf, path: PathBuf) -> String {
         let mut name = path.to_str().unwrap().replace(base.to_str().unwrap(), "")
             .replace(path::MAIN_SEPARATOR, "/").split('.').nth(0).unwrap().to_string();
@@ -216,13 +184,16 @@ impl DesktopLoader {
         return name;
     }
 
-    fn find_files(directory: PathBuf, output: &mut Vec<PathBuf>) -> Result<(), Error> {
-        for file in fs::read_dir(directory)? {
+    fn find_files(directory: PathBuf, output: &mut Vec<PathBuf>, ignoring: Vec<&str>) -> Result<(), Error> {
+        for file in fs::read_dir(directory.clone())? {
             let file = file?;
             if file.file_type()?.is_file() {
                 output.push(file.path());
             } else {
-                DesktopLoader::find_files(file.path(), output)?
+                if ignoring.contains(&file.file_name().to_str().unwrap()) {
+                    continue
+                }
+                DesktopLoader::find_files(file.path(), output, Vec::new())?
             }
         }
         return Ok(());
@@ -235,7 +206,7 @@ impl DesktopLoader {
 
         let mut output = Vec::new();
         let mut temp = Vec::new();
-        DesktopLoader::find_files(directory.clone(), &mut temp)?;
+        DesktopLoader::find_files(directory.clone(), &mut temp, Vec::new())?;
         for file in temp {
             output.push((Self::get_relative_path(directory.clone(), file.clone()),
                          json::parse(String::from_utf8(fs::read(file)?)?.as_str())?));

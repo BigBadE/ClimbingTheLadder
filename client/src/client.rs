@@ -4,9 +4,10 @@ use winit::event::{ElementState, KeyboardInput, ModifiersState, MouseButton};
 use crate::display::window::GameWindow;
 use crate::renderer::renderer::{RENDERER, RENDERER_REF};
 use crate::ui::manager::UIManager;
-use game::{error, Game};
-use game::resources::content_pack::ContentPack;
-use crate::renderer::shaders::{SHADER_MANAGER, ShaderManager};
+use game::{error, Game, LoadingStage};
+use game::util::alloc_handle::AllocHandle;
+use crate::resources::content_pack::ContentPack;
+use crate::resources::loading;
 
 pub struct Client {
     game: Game,
@@ -17,14 +18,10 @@ pub struct Client {
 
 impl Client {
     pub fn new(window: GameWindow, mut game: Game, content: Box<dyn ContentPack>) -> Self {
-        game.task_manager.queue(false, ShaderManager::load(
-            window.device.clone(), window.config.clone(), true, content.clone_boxed()));
-        game.task_manager.queue(false, ShaderManager::load(
-            window.device.clone(), window.config.clone(), false, content.clone_boxed()));
-        //You may be wondering why go through this load function.
-        //It's because if you don't, lazy_static will re-initialize the static for no reason.
-        game.resource_manager.lock().unwrap().asset_manager.load(
-            &mut game.task_manager, content.clone_boxed());
+        loading::early_load(&window, &content, &mut game.task_manager);
+        game.task_manager.wait(Self::finish_early);
+        loading::load(&window, &content, &game.resource_manager, &mut game.task_manager);
+        game.task_manager.wait(loading::finish_load);
 
         return Self {
             game,
@@ -34,8 +31,12 @@ impl Client {
         };
     }
 
+    pub fn finish_early(game: &mut Game, _: AllocHandle) {
+        game.loaded = LoadingStage::Loading;
+    }
+
     pub fn render(&mut self) -> bool {
-        if !SHADER_MANAGER.lock().unwrap().loaded_ui_shaders {
+        if let LoadingStage::Early = self.game.loaded {
             return false;
         }
 

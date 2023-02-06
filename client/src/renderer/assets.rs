@@ -6,9 +6,8 @@ use game::error;
 use game::rendering::{AssetType, GameTexture};
 use game::rendering::assets::AssetReference;
 use game::rendering::mesh::Mesh;
-use game::resources::content_pack::ContentPack;
+use crate::resources::content_pack::ContentPack;
 use game::util::alloc_handle::AllocHandle;
-use game::util::task_manager::TaskManager;
 
 lazy_static! {
     pub static ref ASSET_MANAGER: Mutex<AssetManager> = Mutex::new(AssetManager::new());
@@ -27,10 +26,10 @@ impl AssetManager {
         }
     }
 
-    pub async fn load(handle: Handle, content: Box<dyn ContentPack>) -> AllocHandle {
-        let assets = content.assets(&handle);
+    pub async fn load(handle: Handle, content: Box<dyn ContentPack>, load_first: bool) -> AllocHandle {
+        let assets = content.assets(&handle, load_first).await;
 
-        match assets.await {
+        match assets {
             Ok(found) => {
                 let mut manager = ASSET_MANAGER.lock().unwrap();
                 for asset in found {
@@ -66,10 +65,6 @@ impl AssetReference for AssetReferer {
             Some(value) => Some(value.clone()),
             None => None
         }
-    }
-
-    fn load(&self, task_manager: &mut TaskManager, content: Box<dyn ContentPack>) {
-        task_manager.queue(false, AssetManager::load(task_manager.get_runtime(false).clone(), content));
     }
 }
 

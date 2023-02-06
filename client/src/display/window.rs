@@ -8,7 +8,7 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
 use game::Game;
-use game::resources::content_pack::ContentPack;
+use crate::resources::content_pack::ContentPack;
 use crate::client::Client;
 use crate::renderer::renderer::RENDERER;
 use crate::settings::GameSettings;

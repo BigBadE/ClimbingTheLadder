@@ -4,7 +4,7 @@ use json::JsonValue;
 use lazy_static::lazy_static;
 use crate::error;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Mesh {
     pub shader: String,
     pub vertexes: Vec<Vertex>,

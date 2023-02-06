@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter};
 use crate::rendering::GameTexture;
 
+#[derive(Debug)]
 pub struct ColorTexture {
     color: [u8; 4]
 }

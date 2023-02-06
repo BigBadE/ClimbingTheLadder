@@ -32,10 +32,10 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(resource_manager: Arc<Mutex<ResourceManager>>, mut task_manager: TaskManager,
+    pub fn new(resource_manager: Arc<Mutex<ResourceManager>>, task_manager: TaskManager,
                mut registerer: HashMap<&'static str, Box<dyn ThingRegister>>) -> Self {
         println!("Starting game");
-        let settings = Settings::new();
+        let settings = Settings::default();
 
         Self::add_registers(&mut registerer);
 

@@ -216,6 +216,7 @@ dependencies = [
  "image",
  "include_dir",
  "instant",
+ "interfaces",
  "json",
  "lazy_static",
  "libloading",
@@ -623,6 +624,7 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "cgmath",
+ "interfaces",
  "json",
  "lazy_static",
  "macros",
@@ -817,6 +819,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "interfaces"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "json",
+]
+
+[[package]]
 name = "io-lifetimes"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -921,6 +931,7 @@ dependencies = [
 name = "macros"
 version = "0.1.0"
 dependencies = [
+ "interfaces",
  "syn",
 ]
 

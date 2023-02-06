@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-macros = { path = "../macros" }
+macros = { path = "../util/macros" }
+interfaces = { path = "../util/interfaces" }
 game = { path = "../game", features = ["renderer"] }
 
 # Modding

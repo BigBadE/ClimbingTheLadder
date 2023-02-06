@@ -7,5 +7,6 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
+interfaces = { path = "../interfaces" }
 # Macros
 syn = "1.0.103"

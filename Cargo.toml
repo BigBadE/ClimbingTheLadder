@@ -3,7 +3,8 @@ members = [
     "server",
     "client",
     "game",
-    "macros"
+    "util/macros",
+    "util/interfaces"
 ]
 resolver = "2"
 

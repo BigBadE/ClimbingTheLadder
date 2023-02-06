@@ -72,7 +72,7 @@ impl GameWindow {
         surface.configure(&device, &config);
 
         return Self {
-            settings: GameSettings::new(),
+            settings: GameSettings::default(),
             modifiers: 0,
             surface,
             device: Arc::new(Mutex::new(device)),

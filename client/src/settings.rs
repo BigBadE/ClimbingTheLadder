@@ -1,26 +1,18 @@
 use std::time::Duration;
-use game::settings::Settings;
-use macros::JsonResource;
-use json::JsonValue;
+use macros::{JsonLoadable, JsonSaveable};
 use crate::input::manager::InputManager;
 
-#[derive(JsonResource)]
+#[derive(JsonLoadable, JsonSaveable)]
 pub struct GameSettings {
     pub frames_per_second: Duration,
-    pub inputs: InputManager,
-    pub settings: Settings
+    pub inputs: InputManager
 }
 
-impl GameSettings {
-    pub fn new() -> Self {
+impl Default for GameSettings {
+    fn default() -> Self {
         return Self {
             frames_per_second: Duration::from_nanos(1000000000 / 60),
-            inputs: InputManager::new(),
-            settings: Settings::new()
+            inputs: InputManager::default()
         };
-    }
-
-    pub fn load(resource: &JsonValue) -> Self {
-        return __load_GameSettings(GameSettings::new(), resource).unwrap();
     }
 }

@@ -8,6 +8,7 @@ use tokio::runtime::Handle;
 use tokio::task::JoinSet;
 use game::mods::mod_trait::ModMain;
 use game::mods::mods::{GameMod, ModManifest};
+use interfaces::loading::JsonLoadable;
 use crate::DesktopLoader;
 
 pub(crate) fn get_mods(path: PathBuf, runtime: &Handle) -> JoinSet<Result<GameMod, Error>> {
@@ -34,7 +35,7 @@ async fn load_mod(mod_folder: DirEntry) -> Result<GameMod, Error> {
         return Err(Error::msg(format!("Mod {} has no manifest, ignoring", mod_folder.file_name().to_str().unwrap())));
     }
     let manifest = json::from(fs::read(manifest).unwrap());
-    let manifest = ModManifest::load(&manifest)?;
+    let manifest: ModManifest = JsonLoadable::load(&manifest)?;
     let target = mod_folder.path().join("assemblies")
         .join(format!("{}.rlib", env::consts::ARCH));
     if !target.exists() {

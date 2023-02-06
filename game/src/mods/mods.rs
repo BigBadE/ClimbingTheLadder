@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 use std::string::String;
-use anyhow::Error;
-use json::JsonValue;
-use macros::JsonResource;
+use macros::JsonLoadable;
 use crate::mods::mod_trait::ModMain;
-use crate::util::json_util::stringify;
 
 //A loaded mod
 pub struct GameMod {
@@ -21,41 +18,14 @@ impl GameMod {
     }
 }
 
-#[derive(JsonResource)]
+#[derive(JsonLoadable, Default)]
 pub struct ModManifest {
+    #[require_field]
     pub name: String,
+    #[require_field]
     pub main: String,
-    #[ignore_field]
+    #[require_field]
     pub platforms: HashMap<String, String>,
-    #[ignore_field]
     pub hard_dependencies: Vec<String>,
-    #[ignore_field]
     pub soft_dependencies: Vec<String>
-}
-
-impl ModManifest {
-    fn new() -> Self {
-        return Self {
-            name: String::new(),
-            main: String::new(),
-            platforms: HashMap::new(),
-            hard_dependencies: Vec::new(),
-            soft_dependencies: Vec::new()
-        }
-    }
-
-    pub fn load(manifest: &JsonValue) -> Result<Self, Error> {
-        let mut returning = __load_ModManifest(ModManifest::new(), manifest)?;
-        for entry in manifest["platforms"].entries() {
-            returning.platforms.insert(entry.0.to_string(), match entry.1 {
-                JsonValue::String(str) => str.clone(),
-                _ => return Err(Error::msg("Unknown type for platform!"))
-            }).unwrap();
-        }
-
-        returning.hard_dependencies = stringify(&manifest["hard_dependencies"]);
-        returning.soft_dependencies = stringify(&manifest["soft_dependencies"]);
-
-        return Ok(returning)
-    }
 }

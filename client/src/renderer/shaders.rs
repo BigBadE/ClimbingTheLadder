@@ -14,8 +14,14 @@ use crate::renderer::renderer::RENDERER;
 use crate::resources::content_pack::ContentPack;
 
 pub struct ShaderManager {
-    pub shaders: HashMap<String, (RenderPipeline, ShaderModule)>,
+    pub shaders: HashMap<String, Shader>,
     pub loaded_ui_shaders: bool,
+}
+
+pub struct Shader {
+    pub pipeline: RenderPipeline,
+    pub module: ShaderModule,
+    pub ui: bool
 }
 
 lazy_static! {
@@ -68,7 +74,7 @@ impl ShaderManager {
         };
     }
 
-    pub async fn load(device: Arc<Mutex<Device>>, config: SurfaceConfiguration,
+    pub async fn load(ui: bool, device: Arc<Mutex<Device>>, config: SurfaceConfiguration,
                       mut shaders: JoinSet<(String, String)>) -> AllocHandle {
         while let Some(result) = shaders.join_next().await {
             let (name, source) = match result {
@@ -86,22 +92,32 @@ impl ShaderManager {
                 label: Some(name.as_str()),
                 source: ShaderSource::Wgsl(source.into()),
             });
-            SHADER_MANAGER.lock().unwrap().shaders.insert(name.clone(), (Self::get_pipeline(device, &config, &shader), shader));
+            SHADER_MANAGER.lock().unwrap().shaders.insert(name.clone(), Shader::new(
+                Self::get_pipeline(ui, device, &config, &shader), shader, ui));
         }
 
         return AllocHandle::empty();
     }
 
-    pub fn get_pipeline(device: &Device, config: &SurfaceConfiguration, shader: &ShaderModule) -> RenderPipeline {
+    pub fn get_pipeline(ui: bool, device: &Device, config: &SurfaceConfiguration, shader: &ShaderModule) -> RenderPipeline {
         let bind_group = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: BIND_LAYOUT.deref(),
             label: Some("Texture Bind Group Layout"),
         });
-        let layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[&bind_group, &RENDERER.lock().unwrap().camera.as_ref().unwrap().camera_bind_group_layout],
-            push_constant_ranges: &[],
-        });
+        let layout;
+        if ui {
+            layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[&bind_group],
+                push_constant_ranges: &[],
+            });
+        } else {
+            layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[&bind_group, &RENDERER.lock().unwrap().camera.as_ref().unwrap().camera_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+        }
         return device.create_render_pipeline(&RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&layout),
@@ -147,6 +163,16 @@ impl ShaderManager {
             array_stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &Self::ATTRIBS,
+        }
+    }
+}
+
+impl Shader {
+    pub fn new(pipeline: RenderPipeline, module: ShaderModule, ui: bool) -> Self {
+        return Self {
+            pipeline,
+            module,
+            ui
         }
     }
 }

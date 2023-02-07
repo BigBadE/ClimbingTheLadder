@@ -4,6 +4,7 @@ use std::time::Duration;
 use json::JsonValue;
 use json::number::Number;
 use json::object::Object;
+use crate::loading::LoadableNumber;
 
 pub trait JsonSaveable {
     fn save(&self) -> JsonValue;
@@ -38,5 +39,21 @@ impl JsonSaveable for String {
 impl JsonSaveable for Duration {
     fn save(&self) -> JsonValue {
         return JsonValue::Number(Number::from(self.as_nanos() as u64));
+    }
+}
+
+impl<T, const LEN: usize> JsonSaveable for [T; LEN] where T: JsonSaveable {
+    fn save(&self) -> JsonValue {
+        let mut output = Vec::new();
+        for value in self {
+            output.push(JsonSaveable::save(value));
+        }
+        return JsonValue::Array(output);
+    }
+}
+
+impl<T> JsonSaveable for T where T: LoadableNumber {
+    fn save(&self) -> JsonValue {
+        return JsonValue::Number(Into::<Number>::into(*self));
     }
 }

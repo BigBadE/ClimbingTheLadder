@@ -29,16 +29,15 @@ pub fn load(window: &GameWindow, content: &Box<dyn ContentPack>, resource_manage
     }
 
     let runtime = task_manager.get_runtime(true).clone();
-    //TODO speed these up
-    task_manager.queue(false, ShaderManager::load(window.device.clone(), window.config.clone(),
+    task_manager.queue(false, load_language(runtime.clone(), content.clone_boxed()));
+    task_manager.queue(false, ShaderManager::load(false, window.device.clone(), window.config.clone(),
                                                   ShaderManager::get_shaders(false, runtime.clone(), content.clone_boxed())));
     task_manager.queue(false, AssetManager::load(runtime.clone(), content.clone_boxed(), false));
-    task_manager.queue(false, load_language(runtime.clone(), content.clone_boxed()));
 }
 
 pub fn finish_load(game: &mut Game, _: AllocHandle) {
     game.loaded = LoadingStage::Finished;
-    game.registerer.get("keybinds").unwrap();
+    game.registerer.get("keyaction").unwrap();
     game.task_manager.queue_after(false, Game::finish_loading(
         game.task_manager.get_runtime(false).clone(), game.resource_manager.clone(),
         AllocHandle::convert(game.registerer.get("world").unwrap().registered())), Game::done_loading);
@@ -47,13 +46,13 @@ pub fn finish_load(game: &mut Game, _: AllocHandle) {
 pub fn early_load(window: &GameWindow, content: &Box<dyn ContentPack>, task_manager: &mut TaskManager) {
     let runtime = task_manager.get_runtime(true).clone();
 
-    task_manager.queue(false, ShaderManager::load(window.device.clone(), window.config.clone(),
+    task_manager.queue(false, ShaderManager::load(true, window.device.clone(), window.config.clone(),
                                                   ShaderManager::get_shaders(true, runtime.clone(), content.clone_boxed())));
     task_manager.queue(false, AssetManager::load(runtime.clone(), content.clone_boxed(), true));
 }
 
-
-pub async fn load_language(handle: Handle, content: Box<dyn ContentPack>) -> AllocHandle {
+pub async fn load_language(_handle: Handle, content: Box<dyn ContentPack>) -> AllocHandle {
+    //TODO speed these up
     LANGUAGE_MANAGER.write().unwrap().load_packs(content.language());
 
     return AllocHandle::empty();
@@ -87,7 +86,7 @@ pub async fn load_types(loading: impl Future<Output=Result<Result<JsonValue, Err
     while let Some(value) = join_set.join_next().await {
         match value {
             Ok(result) => match result {
-                Ok((id, named_type)) => loader.lock().unwrap().finish(id, named_type),
+                Ok(_) => {},
                 Err(error) => error!("Error loading JSON resource {}:\n{}", name, error)
             }
             Err(error) => error!("Error joining resource loading thread:\n{}", error)

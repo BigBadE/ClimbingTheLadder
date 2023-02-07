@@ -15,7 +15,7 @@ libloading = "0.7.4"
 json = "0.12.4"
 
 # Rendering
-winit = "0.27.5"
+winit = "0.28.1"
 wgpu = "0.15.0"
 
 # Utility

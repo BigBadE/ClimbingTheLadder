@@ -17,11 +17,11 @@ impl ContentPack for WebLoader {
         todo!()
     }
 
-    fn get_relative(&self, subpath: &str, path: &PathBuf) -> String {
+    fn get_relative(&self, _subpath: &str, _path: &PathBuf) -> String {
         todo!()
     }
 
-    fn assets(&self, handle: &Handle, load_first: bool) -> JoinHandle<Vec<AssetType>> {
+    fn assets(&self, _handle: &Handle, _load_first: bool) -> JoinHandle<Vec<AssetType>> {
         todo!()
     }
 
@@ -29,7 +29,7 @@ impl ContentPack for WebLoader {
         todo!()
     }
 
-    fn shaders(&self, early: bool) -> Vec<PathBuf> {
+    fn shaders(&self, _early: bool) -> Vec<PathBuf> {
         todo!()
     }
 

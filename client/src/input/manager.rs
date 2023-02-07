@@ -6,7 +6,6 @@ use winit::event::{ElementState, MouseButton, VirtualKeyCode};
 use game::{Game, hashmap};
 use interfaces::loading::JsonLoadable;
 use interfaces::saving::JsonSaveable;
-use macros::JsonSaveable;
 
 pub type PressedKey = (VirtualKeyCode, u32);
 pub type KeyAction = (&'static str, fn(&mut Game, &ElementState));

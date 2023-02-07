@@ -1,11 +1,11 @@
 use std::string::ToString;
 use cgmath::Vector3;
-use json::JsonValue;
 use lazy_static::lazy_static;
-use crate::error;
+use macros::JsonLoadable;
 
-#[derive(Clone, Debug)]
+#[derive(JsonLoadable, Clone, Debug, Default)]
 pub struct Mesh {
+    #[require_field]
     pub shader: String,
     pub vertexes: Vec<Vertex>,
     pub indices: Vec<u16>,
@@ -30,30 +30,6 @@ impl Mesh {
         };
     }
 
-    pub fn load(model: JsonValue) -> Self {
-        let mut returning = Self::new(model["shader"].to_string());
-        match &model["vertexes"] {
-            JsonValue::Array(array) => {
-                for value in array {
-                    returning.vertexes.push(Vertex::load(value));
-                }
-            }
-            _ => error!("Expected array for vertexes")
-        }
-        match &model["indices"] {
-            JsonValue::Array(array) => {
-                for value in array {
-                    match value {
-                        JsonValue::Number(number) => returning.indices.push(f64::from(*number) as u16),
-                        _ => error!("Expected vertex in JSON model:\n{}", model)
-                    }
-                }
-            }
-            _ => error!("Expected array for vertexeindexess")
-        }
-        return returning;
-    }
-
     pub fn cube(shader: String) -> Self {
         let mut temp = CUBE.clone();
         temp.shader = shader;
@@ -74,10 +50,10 @@ impl FrameData {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Copy, Clone, Debug, JsonLoadable, Default)]
 pub struct Vertex {
     position: [f32; 3],
-    tex_coords: [f32; 2],
+    tex_coords: [f32; 2]
 }
 
 impl Vertex {
@@ -85,35 +61,6 @@ impl Vertex {
         return Self {
             position,
             tex_coords,
-        };
-    }
-
-    pub fn load(loading: &JsonValue) -> Self {
-        return Self {
-            position: Self::load_array(&loading["pos"]),
-            tex_coords: Self::load_array(&loading["tex"]),
-        };
-    }
-
-    fn load_array<const L: usize>(from: &JsonValue) -> [f32; L] {
-        return match from {
-            JsonValue::Array(array) => {
-                let mut loading = [0f32; L];
-                for i in 0..L {
-                    loading[i] = match array.get(i).unwrap() {
-                        JsonValue::Number(number) => f32::from(*number),
-                        _ => {
-                            error!("Unknown type, expected number:\n{}", from);
-                            return [0f32; L];
-                        }
-                    }
-                }
-                loading
-            }
-            _ => {
-                error!("Expected array, found:\n{}", from);
-                [0f32; L]
-            }
         };
     }
 }

@@ -25,6 +25,10 @@ impl UIManager {
         }
     }
 
+    pub fn loading(&mut self) {
+
+    }
+
     pub fn open(&mut self, window: UIWindow) {
         self.windows.push(window);
     }

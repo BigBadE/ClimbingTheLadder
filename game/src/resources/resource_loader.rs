@@ -1,4 +1,3 @@
-use std::any::TypeId;
 use std::collections::HashMap;
 use std::future::Future;
 use std::ops::DerefMut;
@@ -8,7 +7,6 @@ use std::task::{Context, Poll, Waker};
 use anyhow::Error;
 use json::object::Object;
 use crate::ResourceManager;
-use crate::resources::resource_manager::NamedType;
 use crate::util::alloc_handle::AllocHandle;
 
 pub struct ResourceLoader {
@@ -16,7 +14,7 @@ pub struct ResourceLoader {
     sleeping: u32,
     deadlocked: bool,
     reference: Arc<Mutex<ResourceManager>>,
-    wakers: HashMap<String, Vec<Waker>>
+    wakers: HashMap<String, Vec<Waker>>,
 }
 
 impl ResourceLoader {
@@ -26,54 +24,31 @@ impl ResourceLoader {
             sleeping: 0,
             deadlocked: false,
             reference,
-            wakers: HashMap::new()
-        }
+            wakers: HashMap::new(),
+        };
     }
 
-    pub fn finish(&mut self, id: TypeId, named_type: Box<dyn NamedType>) {
-        let mut manager = self.reference.lock().unwrap();
-
-        let index = manager.all_types.len();
-        manager.named_types.insert(named_type.name().clone(), index);
-        manager.all_types.push(Arc::new(AllocHandle::new(named_type)));
-        match manager.types.get_mut(&id) {
-            Some(found) => found.push(index),
-            None => {
-                manager.types.insert(id, vec!(index));
-            },
-        }
-    }
-
-    pub fn spawn(reference: Arc<Mutex<ResourceLoader>>, object: Object) -> impl Future<Output=Result<(TypeId, Box<dyn NamedType>), Error>>{
+    pub fn spawn(reference: Arc<Mutex<ResourceLoader>>, object: Object) -> impl Future<Output=Result<(), Error>> {
         return ResourceLoadTask::new(object, reference);
-    }
-    
-    fn deadlock(&mut self) {
-        self.deadlocked = true;
-        for wakers in self.wakers.values() {
-            for waker in wakers {
-                waker.wake_by_ref()
-            }
-        }
     }
 }
 
 pub struct ResourceLoadTask {
     object: Object,
-    loader: Arc<Mutex<ResourceLoader>>
+    loader: Arc<Mutex<ResourceLoader>>,
 }
 
 impl ResourceLoadTask {
     pub fn new(object: Object, loader: Arc<Mutex<ResourceLoader>>) -> Self {
         return Self {
             object,
-            loader
-        }
+            loader,
+        };
     }
 }
 
 impl Future for ResourceLoadTask {
-    type Output = Result<(TypeId, Box<dyn NamedType>), Error>;
+    type Output = Result<(), Error>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let obj_type = match self.object.get("$type") {
@@ -84,21 +59,28 @@ impl Future for ResourceLoadTask {
         let obj_type = obj_type.as_str();
 
         let mut loader = self.loader.lock().unwrap();
-        let manager = loader.reference.clone();
-        let mut manager = manager.lock().unwrap();
-        
-        let creator = match manager.instantiators.get(obj_type) {
+        let mut manager = loader.reference.lock().unwrap();
+
+        let (id, named_type) = match manager.instantiators.get(obj_type) {
             Some(instantiator) => match instantiator(manager.deref_mut(), &self.object) {
                 Ok(value) => match value {
                     Ok(creator) => creator,
                     Err(blocked) => {
                         if loader.deadlocked {
                             return Poll::Ready(Err(Error::msg(format!(
-                                "Failed to find NamedType {} for JSON:\n{:?}", blocked, self.object))))
+                                "Failed to find NamedType {} for JSON:\n{:?}", blocked, self.object))));
                         }
+                        drop(manager);
                         loader.sleeping += 1;
                         if loader.sleeping == loader.total_tasks {
-                            loader.deadlock();
+                            loader.deadlocked = true;
+                            for wakers in loader.wakers.values() {
+                                for waker in wakers {
+                                    waker.wake_by_ref();
+                                }
+                            }
+                            return Poll::Ready(Err(Error::msg(format!(
+                                "Failed to find NamedType {} for JSON:\n{:?}", blocked, self.object))));
                         }
                         match loader.wakers.get_mut(&blocked) {
                             Some(vec) => vec.push(cx.waker().clone()),
@@ -122,7 +104,18 @@ impl Future for ResourceLoadTask {
             None => return Poll::Ready(Err(Error::msg(
                 format!("No name ($name( in JSON\n{:?}", self.object))))
         };
-        
+
+        let index = manager.all_types.len();
+        manager.named_types.insert(named_type.name().clone(), index);
+        manager.all_types.push(Arc::new(AllocHandle::new(named_type)));
+        match manager.types.get_mut(&id) {
+            Some(found) => found.push(index),
+            None => {
+                manager.types.insert(id, vec!(index));
+            }
+        }
+
+        drop(manager);
         //Reduce the tasks and wake everyone up.
         loader.total_tasks -= 1;
         match loader.wakers.get(&name) {
@@ -130,7 +123,7 @@ impl Future for ResourceLoadTask {
                 waker.wake_by_ref()
             },
             None => {}
-        }         
-        return Poll::Ready(Ok(creator))
+        }
+        return Poll::Ready(Ok(()));
     }
 }

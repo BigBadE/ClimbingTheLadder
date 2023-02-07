@@ -14,7 +14,9 @@ use game::error;
 use game::language::language::LanguagePack;
 use game::rendering::{AssetType, GameTexture};
 use game::rendering::mesh::Mesh;
+use interfaces::loading::JsonLoadable;
 use crate::resources::content_pack::ContentPack;
+use crate::resources::loading::load_json;
 
 #[derive(Clone)]
 pub struct DesktopLoader {
@@ -47,16 +49,16 @@ impl ContentPack for DesktopLoader {
     }
 
     fn assets(&self, handle: &Handle, load_first: bool) -> JoinHandle<Vec<AssetType>> {
+        let mut join_set = JoinSet::new();
         let mut output = Vec::new();
-        match DesktopLoader::load_json(self.root.join("assets/models")) {
-            Ok(value) => {
-                let mut loaded = HashMap::new();
-                for (file, model) in value {
-                    loaded.insert(file, Arc::new(Mesh::load(model)));
-                }
-                output.push(AssetType::Model(loaded));
+        if !load_first {
+            match DesktopLoader::find_files(self.root.join("assets/models"), &mut output, vec!()) {
+                Ok(_) => {},
+                Err(error) => error!("Error finding models: {}", error)
             }
-            Err(error) => error!("Error loading models: {}", error)
+            for asset in output {
+                join_set.spawn_on(Self::load_model(self.root.join("assets/models"), asset), handle);
+            }
         }
 
         let mut temp = Vec::new();
@@ -73,11 +75,11 @@ impl ContentPack for DesktopLoader {
                 error!("Error finding textures: {}", error)
             }
         }
-        let mut loading = JoinSet::new();
         for texture in temp {
-            loading.spawn_on(Self::load_image(self.root.join("assets/textures"), texture), handle);
+            join_set.spawn_on(Self::load_image(self.root.join("assets/textures"), texture), handle);
         }
-        return handle.spawn(Self::join_images(loading, output));
+        let output = Vec::new();
+        return handle.spawn(Self::join_images(join_set, output));
     }
 
     fn language(&self) -> Vec<LanguagePack> {
@@ -150,31 +152,44 @@ impl DesktopLoader {
         };
     }
 
-    async fn join_images(mut loading: JoinSet<Result<(String, Arc<dyn GameTexture>), Error>>, mut input: Vec<AssetType>) -> Vec<AssetType> {
-        let mut temp = HashMap::new();
+    async fn join_images(mut loading: JoinSet<Result<LoadingAsset, Error>>, mut input: Vec<AssetType>) -> Vec<AssetType> {
+        let mut textures = HashMap::new();
+        let mut models = HashMap::new();
+
         while let Some(found) = loading.join_next().await {
             match found {
                 Ok(value) => match value {
-                    Ok((name, value)) => {
-                        temp.insert(name, value);
+                    Ok(asset) => match asset {
+                        LoadingAsset::Texture((name, value)) => {
+                            textures.insert(name, value);
+                        },
+                        LoadingAsset::Model((name, mesh)) => {
+                            models.insert(name, mesh);
+                        }
                     }
                     Err(error) => error!("Error loading file:\n{}", error)
                 },
                 Err(error) => error!("Internal error loading file:\n{}", error)
             }
         }
-        input.push(AssetType::Texture(temp));
+        input.push(AssetType::Texture(textures));
+        input.push(AssetType::Model(models));
         return input;
     }
 
-    async fn load_image(base: PathBuf, texture: PathBuf) -> Result<(String, Arc<dyn GameTexture>), Error> {
+    async fn load_model(base: PathBuf, location: PathBuf) -> Result<LoadingAsset, Error> {
+        return Ok(LoadingAsset::Model((Self::get_relative_path(base, location.clone()),
+                                       Arc::new(Mesh::load(&load_json(location).await?)?))));
+    }
+
+    async fn load_image(base: PathBuf, texture: PathBuf) -> Result<LoadingAsset, Error> {
         let loaded = image::load(BufReader::new(File::open(texture.clone())?),
                                  ImageFormat::Png).unwrap().to_rgba8();
         let name = Self::get_relative_path(base, texture);
-        return Ok((name.clone(), Arc::new(TextureWrapper {
+        return Ok(LoadingAsset::Texture((name.clone(), Arc::new(TextureWrapper {
             texture: loaded,
             name,
-        })));
+        }))));
     }
 
     fn get_relative_path(base: PathBuf, path: PathBuf) -> String {
@@ -213,4 +228,9 @@ impl DesktopLoader {
         }
         return Ok(output);
     }
+}
+
+enum LoadingAsset {
+    Texture((String, Arc<dyn GameTexture>)),
+    Model((String, Arc<Mesh>))
 }

@@ -37,9 +37,11 @@ impl Client {
 
     pub fn render(&mut self) -> bool {
         if let LoadingStage::Early = self.game.loaded {
+            self.ui_manager.loading();
             return false;
         }
 
+        self.ui_manager.update();
         let result = RENDERER.lock().unwrap().render(&mut self.window);
         return match result {
             Ok(()) => false,

@@ -70,9 +70,11 @@ impl GameRenderer {
             for data in self.rendering.values() {
                 match shaders.shaders.get(&data.shader) {
                     Some(shader) => {
-                        render_pass.set_pipeline(&shader.0);
+                        render_pass.set_pipeline(&shader.pipeline);
                         render_pass.set_bind_group(0, &data.bind_group, &[]);
-                        render_pass.set_bind_group(1, &self.camera.as_ref().unwrap().camera_bind_group, &[]);
+                        if !shader.ui {
+                            render_pass.set_bind_group(1, &self.camera.as_ref().unwrap().camera_bind_group, &[]);
+                        }
                         render_pass.set_vertex_buffer(0, data.vertex_buffer.slice(..));
                         render_pass.set_index_buffer(data.index_buffer.slice(..), IndexFormat::Uint16);
                         render_pass.draw_indexed(
